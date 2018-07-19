@@ -241,6 +241,109 @@ subroutine readRaw(ob)
   
 end subroutine readRaw
 
+
+subroutine writeRAW(ob)
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  type(mesDonnees) :: ob
+  !>
+  integer          :: iVar,iDeg,iCell
+  character(80)    :: buffer  
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  open(unit=250             ,&
+  &    file=trim(ob%file)   ,&
+  &    recordtype='stream'  ,&
+  &    form  ='unformatted' ,&
+  &    action='write'       ,&
+  &    status='unknown'      )
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> Header (Version 1:)
+  buffer="Space DG Solver"             ;  write(250)buffer
+  buffer="Raw format version 3"        ;  write(250)buffer
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> Comments (Version 1:)
+  buffer="Solutions"                   ;  write(250)buffer
+  buffer=""                            ;  write(250)buffer
+  buffer=""                            ;  write(250)buffer
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> Geometry (version 3:)
+  select case( ob%geometry )
+  case(Geo2D) ; write(buffer,'("Geometry2D" )') ; write(250)buffer
+  case(GeoAx) ; write(buffer,'("GeometryAxi")') ; write(250)buffer
+  case(Geo3D) ; write(buffer,'("Geometry3D" )') ; write(250)buffer
+  end select
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> Equation (Version 2:)
+  select case( ob%equation )
+  case(EqnLEE) ; write(buffer,'("LEE")') ; write(250)buffer
+  case(EqnEUL) ; write(buffer,'("EUL")') ; write(250)buffer
+  case default
+    write(*,'(/"Choice equation not possible: ",a)')trim(buffer)
+  end select  
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> iRework Version 1:
+  write(250)0
+  write(250)0
+  write(250)0
+  write(250)0
+  write(250)0d0
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> nCellGlob Version 1:
+  write(250)ob%nCell
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> Order (Version 1:)
+  write(250)(ob%ord(iCell), iCell=1,ob%nCell)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> cellType (version 3:)
+  write(250)(ob%cellType(iCell), iCell=1,ob%nCell)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> nSolGlob Version 1:
+  write(250)ob%siz
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  if( ob%solution )then
+    if    ( ob%equation==EqnLEE .and. ob%geometry==Geo2D )then ; ob%ker=3
+    elseif( ob%equation==EqnLEE .and. ob%geometry==GeoAx )then ; ob%ker=4
+    elseif( ob%equation==EqnLEE .and. ob%geometry==Geo3D )then ; ob%ker=4
+    elseif( ob%equation==EqnEUL .and. ob%geometry==Geo2D )then ; ob%ker=4
+    elseif( ob%equation==EqnEUL .and. ob%geometry==Geo3D )then ; ob%ker=5
+    else ; stop"Bad configuration"
+    endif
+  endif
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> vt Version 1:
+  read(unit=250) ((ob%sol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%siz)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  close(250)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  return
+end subroutine writeRAW
+
 subroutine display(ob)
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   type(mesDonnees), intent(in) :: ob
@@ -321,7 +424,6 @@ function equal(ob1,ob2)
   return
 end function equal
 
-
 end module mesProcedures
 
 
@@ -382,6 +484,7 @@ subroutine compare()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   print '(/"usage: lecture <file1> <file2>"/)'
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   if( command_argument_count()>=2 )then
     call get_command_argument(number=1,value =ob1%file   )
@@ -613,6 +716,104 @@ subroutine compare()
 end subroutine compare
 
 
+subroutine writeFlow()
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  use mesParametres
+  use mesProcedures
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  implicit none
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  type :: clock
+    character(8)   :: date
+    character(10)  :: time
+    integer        :: year,mounth,day
+    integer        :: hour,minute,second
+    character(5)   :: zone
+  end type clock
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  type(mesDonnees)    :: ob1
+  type(mesDonnees)    :: ob2
+  integer             :: iCell,iCellMax
+  integer             :: iVar
+  integer             :: iDeg,iDegMax
+  real(8)             :: dSol(1:5),dSolMax(1:5),d,dMax,dAve
+  real(8) , parameter :: eps=1d-12
+  integer             :: cpt
+  integer             :: verbose
+  character(80)       :: buffer
+  integer             :: iErr
+  integer             :: values(8)
+  type(clock)         :: clock0
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  print '(/"usage: writeFlow <file1> <file2>"/)'
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  if( command_argument_count()>=2 )then
+    call get_command_argument(number=1,value =ob1%file   )
+    call get_command_argument(number=2,value =ob2%file   )
+  elseif( command_argument_count()==1 )then
+    call get_command_argument(number=1,value =ob1%file   )
+    write(*,'( "file2: ")',advance='no') ; read(*,'(a)')ob2%file
+  else
+    write(*,'(/"file1: ")',advance='no') ; read(*,'(a)')ob1%file
+    write(*,'( "file2: ")',advance='no') ; read(*,'(a)')ob2%file
+  endif
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  call date_and_time(     &
+  &    date=clock0%date  ,&
+  &    time=clock0%time  ,&
+  &    zone=clock0%zone  ,&
+  &    values=values      )
+  
+  clock0%year  =values(1)
+  clock0%mounth=values(2)
+  clock0%day   =values(3)
+  clock0%hour  =values(5)
+  clock0%minute=values(6)
+  clock0%second=values(7)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  
+  verbose=1
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  call readRAW(ob=ob1)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  call displaySol(ob=ob1)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+stop "writeFlow Compute Flow A VENIR"
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  call displaySol(ob=ob2)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  call writeRAW(ob=ob2)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  call delete(ob=ob1)
+  call delete(ob=ob2)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  return
+end subroutine writeFlow
+
+
 subroutine readPosition()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   use mesParametres
@@ -692,7 +893,9 @@ subroutine readPosition()
 end subroutine readPosition
 
 
+
 program main
+  
   !call compare()
   call readPosition()
 end program main
