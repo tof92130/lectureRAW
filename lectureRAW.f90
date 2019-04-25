@@ -73,10 +73,12 @@ module mesProcedures
     integer               :: version
     logical               :: solution
     real(8)               :: time
-    real(8) , pointer     :: sol(:,:)
-    integer , pointer     :: deg(:)
-    integer , pointer     :: ord(:)
-    integer , pointer     :: cellType(:)
+    logical               :: solutionIsReal
+    real(8)    , pointer  :: dsol(:,:)
+    complex(8) , pointer  :: zsol(:,:)
+    integer    , pointer  :: deg(:)
+    integer    , pointer  :: ord(:)
+    integer    , pointer  :: cellType(:)
     integer               :: meshOrder
     integer               :: nH6
     integer               :: nW5
@@ -99,9 +101,10 @@ subroutine delete(ob)
   type(mesDonnees) :: ob
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  if( associated(ob%sol) )deallocate(ob%sol)
-  if( associated(ob%deg) )deallocate(ob%deg)
-  if( associated(ob%ord) )deallocate(ob%ord)
+  if( associated(ob%dsol) )deallocate(ob%dsol)
+  if( associated(ob%zsol) )deallocate(ob%zsol)
+  if( associated(ob%deg ) )deallocate(ob%deg)
+  if( associated(ob%ord ) )deallocate(ob%ord)
   if( associated(ob%cellType) )deallocate(ob%cellType)
   if( associated(ob%H6uvw) )deallocate(ob%H6uvw)
   if( associated(ob%W5uvw) )deallocate(ob%W5uvw)
@@ -156,7 +159,7 @@ subroutine readRaw(ob)
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   !> Position/Solution  
   ob%solution=.true.   !> par defaut
-  read(unit=250)buffer ; write(*,'(a)')trim(buffer)
+  read(unit=250)buffer ! write(*,'(a)')trim(buffer)
   select case( trim(buffer) )
   case("Solutions") ; ob%solution=.true.
   case("Positions") ; ob%solution=.false.
@@ -164,9 +167,23 @@ subroutine readRaw(ob)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  !> Comments
-  read(unit=250)buffer ; write(*,'(a)')trim(buffer)
+  !> Real or Complex Solution
   read(unit=250)buffer ! write(*,'(a)')trim(buffer)
+  select case(trim(buffer))
+  case("Real")    ; ob%solutionIsReal=.true. 
+  case("Complex") ; ob%solutionIsReal=.false.
+  case default
+    write(*,'(/"Choice Real/Complex not possible: ",a)')trim(buffer)
+    stop
+  end select
+  print '("Solution is ",a)',trim(buffer)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> Mesh Order
+  read(unit=250)buffer ! write(*,'(a)')trim(buffer)  
+  read(buffer,'(11x,i2)')ob%meshOrder
+  print '("meshOrder: ",i2)',ob%meshOrder
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -241,8 +258,13 @@ subroutine readRaw(ob)
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   read(unit=250)ob%nDeg ; ob%nDeg=ob%nDeg/ob%ker
   write(*,'("nDeg=   ",i10  )')ob%nDeg
-  allocate(ob%sol(1:ob%ker,1:ob%nDeg))
-  read(unit=250) ((ob%sol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%nDeg)
+  if( ob%solutionIsReal )then
+    allocate(ob%dsol(1:ob%ker,1:ob%nDeg))
+    read(unit=250) ((ob%dsol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%nDeg)
+  else
+    allocate(ob%zsol(1:ob%ker,1:ob%nDeg))
+    read(unit=250) ((ob%zsol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%nDeg)
+  endif
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -417,7 +439,7 @@ subroutine writeRaw(ob)
   !> sol Version 1:
   write(unit=250)ob%nDeg*ob%ker
   write(*,'("nDeg=   ",i10  )')ob%nDeg
-  write(unit=250) ((ob%sol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%nDeg)
+  write(unit=250) ((ob%dsol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%nDeg)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -433,7 +455,7 @@ subroutine writeInriaHO(ob)
   !>
   integer          :: l
   integer          :: inriaSol
-  integer          :: iCell,nCell
+  integer          :: iCell,nCell,iType
   integer          :: iNod,nNod
   integer          :: deg0,iDeg,nDeg
   real(8), pointer :: uvw(:,:)
@@ -458,9 +480,7 @@ subroutine writeInriaHO(ob)
   !> HO NodesPositions
   
   if( .not.ob%nH6==0 )then
-    if(  .not.count(ob%cellType(:)==hexahedron )==0 )write(inriaSol,'(/"HOSolAtHexahedraQ1NodesPositions")')
-    if(  .not.count(ob%cellType(:)==hexahedron2)==0 )write(inriaSol,'(/"HOSolAtHexahedraQ2NodesPositions")')
-    if(  .not.count(ob%cellType(:)==hexahedron3)==0 )write(inriaSol,'(/"HOSolAtHexahedraQ3NodesPositions")')
+    write(inriaSol,'(/"HOSolAtHexahedraQ",i1,"NodesPositions")')ob%meshOrder
     uvw=>ob%H6uvw
     nNod=size(uvw,2)
     write(inriaSol,'(i0)')nNod
@@ -470,24 +490,19 @@ subroutine writeInriaHO(ob)
   endif
   
   if( .not.ob%nT4==0 )then
-    if(  .not.count(ob%cellType(:)==tetra )==0 )write(inriaSol,'(/"HOSolAtTetrahedraP1NodesPositions")')
-    if(  .not.count(ob%cellType(:)==tetra2)==0 )write(inriaSol,'(/"HOSolAtTetrahedraP2NodesPositions")')
-    if(  .not.count(ob%cellType(:)==tetra3)==0 )write(inriaSol,'(/"HOSolAtTetrahedraP3NodesPositions")')
+    write(inriaSol,'(/"HOSolAtTetrahedraP",i1,"NodesPositions")')ob%meshOrder
     uvw=>ob%T4uvw
     nNod=size(uvw,2)
     write(inriaSol,'(i0)')nNod
     do iNod=1,nNod
-      write(inriaSol,'(*(g0,1x))') uvw(4,iNod),uvw(1:3,iNod)
-     !write(inriaSol,'(*(g0,1x))') uvw(1:4,iNod)
+     !write(inriaSol,'(*(g0,1x))') uvw(4,iNod),uvw(1:3,iNod)
+      write(inriaSol,'(*(g0,1x))') uvw(1:4,iNod)
     enddo
     uvw=>null()
   endif
   
   if( .not.ob%nQ4==0 )then
-    if(  .not.count(ob%cellType(:)==quad )==0 )write(inriaSol,'(/"HOSolAtQuadrilateralsQ1NodesPositions")')
-    if(  .not.count(ob%cellType(:)==quad2)==0 )write(inriaSol,'(/"HOSolAtQuadrilateralsQ2NodesPositions")')
-    if(  .not.count(ob%cellType(:)==quad3)==0 )write(inriaSol,'(/"HOSolAtQuadrilateralsQ3NodesPositions")')
-    if(  .not.count(ob%cellType(:)==quad4)==0 )write(inriaSol,'(/"HOSolAtQuadrilateralsQ4NodesPositions")')
+    write(inriaSol,'(/"HOSolAtQuadrilateralsQ",i1,"NodesPositions")')ob%meshOrder
     uvw=>ob%Q4uvw
     nNod=size(uvw,2)
     write(inriaSol,'(i0)')nNod
@@ -498,15 +513,12 @@ subroutine writeInriaHO(ob)
   endif
   
   if( .not.ob%nT3==0 )then
-    if(  .not.count(ob%cellType(:)==triangle )==0 )write(inriaSol,'(/"HOSolAtTrianglesP1NodesPositions")')
-    if(  .not.count(ob%cellType(:)==triangle2)==0 )write(inriaSol,'(/"HOSolAtTrianglesP2NodesPositions")')
-    if(  .not.count(ob%cellType(:)==triangle3)==0 )write(inriaSol,'(/"HOSolAtTrianglesP3NodesPositions")')
+    write(inriaSol,'(/"HOSolAtTrianglesP",i1,"NodesPositions")')ob%meshOrder
     uvw=>ob%T3uvw
     nNod=size(uvw,2)
     write(inriaSol,'(i0)')nNod
     do iNod=1,nNod
-      write(inriaSol,'(*(g0,1x))') uvw(3,iNod),uvw(1:2,iNod)
-!     write(inriaSol,'(*(g0,1x))') uvw(1:3,iNod)
+      write(inriaSol,'(*(g0,1x))') uvw(1:3,iNod)
     enddo
     uvw=>null()
   endif
@@ -515,27 +527,135 @@ subroutine writeInriaHO(ob)
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   !> HO Solutions
   
+  !> Hexahedra
+  nCell=ob%nH6
+  if( .not.nCell==0 )then
+    nNod=size(ob%H6uvw,2)
+    !>
+    select case(ob%meshOrder)
+    case(1) ; iType=hexahedron
+    case(2) ; iType=hexahedron2
+    case(3) ; iType=hexahedron3
+    case default
+      write(*,'(/"Mesh Order not possible with Hexahedra")')
+      stop
+    end select
+    !>
+    write(inriaSol,'(/"HOSolAtHexahedraQ",i1)')ob%meshOrder
+    write(inriaSol,'(i0)')nCell
+    select case(ob%equation)
+    case(EqnLEE) ; write(inriaSol,'("2 2 1")')  ! {u1, v1, w1 }, x1=rh1*a0/rho0
+    case(EqnEUL) ; write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v, rho w}, rho E
+    case default
+      write(*,'(/"Choice equation not possible: ",i0)')ob%equation
+    end select
+    write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
+    do iCell=1,nCell
+      if( ob%cellType(iCell)==iType )then
+        deg0=ob%deg(iCell)-1 !> juste avant
+        nDeg=ob%deg(iCell+1)-ob%deg(iCell)
+        write(inriaSol,'(*(g0,1x))')ob%dsol(:,deg0+1:deg0+nDeg)
+      endif
+    enddo
+  endif
+  
+  !> Tetrahedra
   nCell=ob%nT4
   if( .not.nCell==0 )then
     nNod=size(ob%T4uvw,2)
-    if(  .not.count(ob%cellType(:)==tetra )==0 )write(inriaSol,'(/"HOSolAtTetrahedraP1")')
-    if(  .not.count(ob%cellType(:)==tetra2)==0 )write(inriaSol,'(/"HOSolAtTetrahedraP2")')
-    if(  .not.count(ob%cellType(:)==tetra3)==0 )write(inriaSol,'(/"HOSolAtTetrahedraP3")')
-    
-    write(inriaSol,'(i0)')ob%nT4
-    !write(inriaSol,'("1 1")')  ! rho E
-    write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v, rho w}, rho E
+    !>
+    select case(ob%meshOrder)
+    case(1) ; iType=tetra
+    case(2) ; iType=tetra2
+    case(3) ; iType=tetra3
+    case default
+      write(*,'(/"Mesh Order not possible with Tetrahedra")')
+      stop
+    end select
+    !>
+    write(inriaSol,'(/"HOSolAtTetrahedraP",i1)')ob%meshOrder
+    write(inriaSol,'(i0)')nCell
+    select case(ob%equation)
+    case(EqnLEE) ; write(inriaSol,'("2 2 1")')  ! {u1, v1, w1 }, x1=rh1*a0/rho0
+    case(EqnEUL) ; write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v, rho w}, rho E
+    case default
+      write(*,'(/"Choice equation not possible: ",i0)')ob%equation
+    end select
     write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
-    
     do iCell=1,nCell
-      if( ob%cellType(iCell)==tetra.or.ob%cellType(iCell)==tetra2.or.ob%cellType(iCell)==tetra3 )then
+      if( ob%cellType(iCell)==iType )then
         deg0=ob%deg(iCell)-1 !> juste avant
         nDeg=ob%deg(iCell+1)-ob%deg(iCell)
-        write(inriaSol,'(*(g0,1x))')ob%sol(:,deg0+1:deg0+nDeg)
+        write(inriaSol,'(*(g0,1x))')ob%dsol(:,deg0+1:deg0+nDeg)
       endif        
     enddo
-    
   endif  
+  
+  !> Quadrilaterals
+  nCell=ob%nQ4
+  if( .not.nCell==0 )then
+    nNod=size(ob%Q4uvw,2)
+    !>
+    select case(ob%meshOrder)
+    case(1) ; iType=quad
+    case(2) ; iType=quad2
+    case(3) ; iType=quad3
+    case(4) ; iType=quad4
+    case default
+      write(*,'(/"Mesh Order not possible with Quadrilaterals")')
+      stop
+    end select
+    !>
+    write(inriaSol,'(/"HOSolAtQuadrilateralsP",i1)')ob%meshOrder
+    write(inriaSol,'(i0)')nCell
+    select case(ob%equation)
+    case(EqnLEE) ; write(inriaSol,'("2 2 1")')  ! {u1, v1}, x1=rh1*a0/rho0
+    case(EqnEUL) ; write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v}, rho E
+    case default
+      write(*,'(/"Choice equation not possible: ",i0)')ob%equation
+    end select
+    write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
+    do iCell=1,nCell
+      if( ob%cellType(iCell)==iType )then
+        deg0=ob%deg(iCell)-1 !> juste avant
+        nDeg=ob%deg(iCell+1)-ob%deg(iCell)
+        write(inriaSol,'(*(g0,1x))')ob%dsol(:,deg0+1:deg0+nDeg)
+      endif        
+    enddo    
+  endif
+  
+  !> Triangles
+  nCell=ob%nT3
+  if( .not.nCell==0 )then
+    nNod=size(ob%T3uvw,2)
+    !>
+    select case(ob%meshOrder)
+    case(1) ; iType=triangle
+    case(2) ; iType=triangle2
+    case(3) ; iType=triangle3
+    case(4) ; iType=triangle4
+    case default
+      write(*,'(/"Mesh Order not possible with Triangles")')
+      stop
+    end select
+    !>
+    write(inriaSol,'(/"HOSolAtTrianglesP",i1)')ob%meshOrder
+    write(inriaSol,'(i0)')nCell
+    select case(ob%equation)
+    case(EqnLEE) ; write(inriaSol,'("2 2 1")')  ! {u1, v1}, x1=rh1*a0/rho0
+    case(EqnEUL) ; write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v}, rho E
+    case default
+      write(*,'(/"Choice equation not possible: ",i0)')ob%equation
+    end select
+    write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
+    do iCell=1,nCell
+      if( ob%cellType(iCell)==iType )then
+        deg0=ob%deg(iCell)-1 !> juste avant
+        nDeg=ob%deg(iCell+1)-ob%deg(iCell)
+        write(inriaSol,'(*(g0,1x))')ob%dsol(:,deg0+1:deg0+nDeg)
+      endif        
+    enddo    
+  endif
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -545,7 +665,6 @@ subroutine writeInriaHO(ob)
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   close(inriaSol)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
   
   return
 end subroutine writeInriaHO
@@ -585,7 +704,7 @@ subroutine displaySol(ob)
   iCell=1
   do iDeg=1,ob%nDeg
     if( iDeg>ob%deg(iCell+1)-1 )iCell=iCell+1
-    print '(3x,"iCell=",i10," iDeg=",i10," xyz=",5(e22.15,1x))',iCell,iDeg,ob%sol(1:ob%ker,iDeg)
+    print '(3x,"iCell=",i10," iDeg=",i10," xyz=",5(e22.15,1x))',iCell,iDeg,ob%dsol(1:ob%ker,iDeg)
   enddo
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   return
@@ -738,7 +857,7 @@ subroutine compareRAW()
     ob%count1 =ob1%count1
     
     do iDeg=1,ob1%nDeg
-      d=norm2(ob1%sol(1:ob1%ker,iDeg))
+      d=norm2(ob1%dsol(1:ob1%ker,iDeg))
       dAve=dAve+d
     enddo
     dAve=dAve/ob1%nDeg
@@ -753,7 +872,7 @@ subroutine compareRAW()
         if( iDeg>ob1%deg(iCell+1)-1 )iCell=iCell+1
       endif
       
-      dSol(1:ob%ker)=ob2%sol(1:ob2%ker,iDeg)-ob1%sol(1:ob1%ker,iDeg)
+      dSol(1:ob%ker)=ob2%dsol(1:ob2%ker,iDeg)-ob1%dsol(1:ob1%ker,iDeg)
       d=norm2(dSol(1:ob%ker))/dAve
       if( dMax<d )then
         iDegMax=iDeg
@@ -775,31 +894,31 @@ subroutine compareRAW()
         select case(ob%ker)
         case(3)
           print '(/3x,"iCell=",i10," iDeg=",i10," sol2-sol1=",3(e22.15,1x)," d=",e22.15)',iCellMax,iDegMax,dSolMax(1:ob%ker),dMax
-          print '( 3x,"iCell=",i10," iDeg=",i10," sol1     =",3(e22.15,1x)             )',iCellMax,iDegMax,ob1%sol(1:ob1%ker,iDegMax)
-          print '( 3x,"iCell=",i10," iDeg=",i10," sol2     =",3(e22.15,1x)             )',iCellMax,iDegMax,ob2%sol(1:ob2%ker,iDegMax)
+          print '( 3x,"iCell=",i10," iDeg=",i10," sol1     =",3(e22.15,1x)             )',iCellMax,iDegMax,ob1%dsol(1:ob1%ker,iDegMax)
+          print '( 3x,"iCell=",i10," iDeg=",i10," sol2     =",3(e22.15,1x)             )',iCellMax,iDegMax,ob2%dsol(1:ob2%ker,iDegMax)
         case(4)
           print '(/3x,"iCell=",i10," iDeg=",i10," sol2-sol1=",4(e22.15,1x)," d=",e22.15)',iCellMax,iDegMax,dSolMax(1:ob%ker),dMax
-          print '( 3x,"iCell=",i10," iDeg=",i10," sol1     =",4(e22.15,1x)             )',iCellMax,iDegMax,ob1%sol(1:ob1%ker,iDegMax)
-          print '( 3x,"iCell=",i10," iDeg=",i10," sol2     =",4(e22.15,1x)             )',iCellMax,iDegMax,ob2%sol(1:ob2%ker,iDegMax)
+          print '( 3x,"iCell=",i10," iDeg=",i10," sol1     =",4(e22.15,1x)             )',iCellMax,iDegMax,ob1%dsol(1:ob1%ker,iDegMax)
+          print '( 3x,"iCell=",i10," iDeg=",i10," sol2     =",4(e22.15,1x)             )',iCellMax,iDegMax,ob2%dsol(1:ob2%ker,iDegMax)
         case(5)
           print '(/3x,"iCell=",i10," iDeg=",i10," sol2-sol1=",5(e22.15,1x)," d=",e22.15)',iCellMax,iDegMax,dSolMax(1:ob%ker),dMax
-          print '( 3x,"iCell=",i10," iDeg=",i10," sol1     =",5(e22.15,1x)             )',iCellMax,iDegMax,ob1%sol(1:ob1%ker,iDegMax)
-          print '( 3x,"iCell=",i10," iDeg=",i10," sol2     =",5(e22.15,1x)             )',iCellMax,iDegMax,ob2%sol(1:ob2%ker,iDegMax)
+          print '( 3x,"iCell=",i10," iDeg=",i10," sol1     =",5(e22.15,1x)             )',iCellMax,iDegMax,ob1%dsol(1:ob1%ker,iDegMax)
+          print '( 3x,"iCell=",i10," iDeg=",i10," sol2     =",5(e22.15,1x)             )',iCellMax,iDegMax,ob2%dsol(1:ob2%ker,iDegMax)
         end select
       else
         select case(ob%ker)
         case(3)
           print '(/3x,"iDeg=",i10," sol2-sol1=",3(e22.15,1x)," d=",e22.15)',iDegMax,dSolMax(1:ob%ker),dMax
-          print '( 3x,"iDeg=",i10," sol1     =",3(e22.15,1x)             )',iDegMax,ob1%sol(1:ob1%ker,iDegMax)
-          print '( 3x,"iDeg=",i10," sol2     =",3(e22.15,1x)             )',iDegMax,ob2%sol(1:ob2%ker,iDegMax)
+          print '( 3x,"iDeg=",i10," sol1     =",3(e22.15,1x)             )',iDegMax,ob1%dsol(1:ob1%ker,iDegMax)
+          print '( 3x,"iDeg=",i10," sol2     =",3(e22.15,1x)             )',iDegMax,ob2%dsol(1:ob2%ker,iDegMax)
         case(4)
           print '(/3x,"iDeg=",i10," sol2-sol1=",4(e22.15,1x)," d=",e22.15)',iDegMax,dSolMax(1:ob%ker),dMax
-          print '( 3x,"iDeg=",i10," sol1     =",4(e22.15,1x)             )',iDegMax,ob1%sol(1:ob1%ker,iDegMax)
-          print '( 3x,"iDeg=",i10," sol2     =",4(e22.15,1x)             )',iDegMax,ob2%sol(1:ob2%ker,iDegMax)
+          print '( 3x,"iDeg=",i10," sol1     =",4(e22.15,1x)             )',iDegMax,ob1%dsol(1:ob1%ker,iDegMax)
+          print '( 3x,"iDeg=",i10," sol2     =",4(e22.15,1x)             )',iDegMax,ob2%dsol(1:ob2%ker,iDegMax)
         case(5)
           print '(/3x,"iDeg=",i10," sol2-sol1=",5(e22.15,1x)," d=",e22.15)',iDegMax,dSolMax(1:ob%ker),dMax
-          print '( 3x,"iDeg=",i10," sol1     =",5(e22.15,1x)             )',iDegMax,ob1%sol(1:ob1%ker,iDegMax)
-          print '( 3x,"iDeg=",i10," sol2     =",5(e22.15,1x)             )',iDegMax,ob2%sol(1:ob2%ker,iDegMax)
+          print '( 3x,"iDeg=",i10," sol1     =",5(e22.15,1x)             )',iDegMax,ob1%dsol(1:ob1%ker,iDegMax)
+          print '( 3x,"iDeg=",i10," sol2     =",5(e22.15,1x)             )',iDegMax,ob2%dsol(1:ob2%ker,iDegMax)
         end select
       endif
     endif
@@ -821,7 +940,7 @@ subroutine compareRAW()
       if( ob1%version>2 )then
         do iDeg=1,ob%nDeg ! print '("iDeg=",i10,"/",i10)',iDeg,ob%nDeg
           if( iDeg>ob1%deg(iCell+1)-1 )iCell=iCell+1
-          dSol(1:ob%ker)=ob2%sol(1:ob2%ker,iDeg)-ob1%sol(1:ob1%ker,iDeg)
+          dSol(1:ob%ker)=ob2%dsol(1:ob2%ker,iDeg)-ob1%dsol(1:ob1%ker,iDeg)
           d=norm2(dSol(1:ob%ker))/dAve
           if( d>0.80*dMax )then
             if( verbose==1 )then
@@ -836,7 +955,7 @@ subroutine compareRAW()
         enddo
       else
         do iDeg=1,ob%nDeg ! print '("iDeg=",i10,"/",i10)',iDeg,ob%nDeg
-          dSol(1:ob%ker)=ob2%sol(1:ob2%ker,iDeg)-ob1%sol(1:ob1%ker,iDeg)
+          dSol(1:ob%ker)=ob2%dsol(1:ob2%ker,iDeg)-ob1%dsol(1:ob1%ker,iDeg)
           d=norm2(dSol(1:ob%ker))/dAve
           if( d>0.80*dMax )then
             if( verbose==1 )then
@@ -913,7 +1032,7 @@ subroutine compareRAW()
     endif
     
     write(unit=250) ob1%ker*ob1%nDeg  ! write(*,'("nDeg=   ",i10  )')ob%nDeg
-    write(unit=250) ((ob1%sol(iVar,iDeg)-ob2%sol(iVar,iDeg),iVar=1,ob1%ker),iDeg=1,ob1%nDeg)
+    write(unit=250) ((ob1%dsol(iVar,iDeg)-ob2%dsol(iVar,iDeg),iVar=1,ob1%ker),iDeg=1,ob1%nDeg)
     
     close(unit=250)
     
@@ -1041,8 +1160,8 @@ subroutine replaceRAW()
     select case(ob2%equation)
     case(EqnEUL)
       do iDeg=1,ob2%nDeg
-        x=ob1%sol(1,iDeg)
-        y=ob1%sol(2,iDeg)
+        x=ob1%dsol(1,iDeg)
+        y=ob1%dsol(2,iDeg)
         coef=amp*exp(-ln2*((x-x0)**2+(y-y0)**2 )/(sigma*sigma))
         
         !> Non-dimensional Values of T
@@ -1057,10 +1176,10 @@ subroutine replaceRAW()
         
         
         !> Physical Values of u,v,r,p
-        r0 =ob2%sol(1,iDeg)
-        ru0=ob2%sol(2,iDeg) ; u0=ru0/r0
-        rv0=ob2%sol(3,iDeg) ; v0=rv0/r0
-        re0=ob2%sol(4,iDeg)
+        r0 =ob2%dsol(1,iDeg)
+        ru0=ob2%dsol(2,iDeg) ; u0=ru0/r0
+        rv0=ob2%dsol(3,iDeg) ; v0=rv0/r0
+        re0=ob2%dsol(4,iDeg)
         p0=(gamma-1d0)*re0+5d-1*r0*(u0*u0+v0*v0)
         
         
@@ -1085,7 +1204,7 @@ subroutine replaceRAW()
         rv=rv-rv0
         re=re-re0
         
-        ob2%sol(1:4,iDeg)=ob2%sol(1:4,iDeg)+[r,ru,rv,re] ! print '("sol=",4(e22.15,1x))',sol(1:4,iVert)
+        ob2%dsol(1:4,iDeg)=ob2%dsol(1:4,iDeg)+[r,ru,rv,re] ! print '("sol=",4(e22.15,1x))',sol(1:4,iVert)
         
         
       enddo
