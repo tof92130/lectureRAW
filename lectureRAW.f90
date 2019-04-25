@@ -544,13 +544,13 @@ subroutine writeInriaHO(ob)
     write(inriaSol,'(/"HOSolAtHexahedraQ",i1)')ob%meshOrder
     write(inriaSol,'(i0)')nCell
     select case(ob%equation)
-    case(EqnLEE) ; write(inriaSol,'("2 2 1")')  ! {u1, v1, w1 }, x1=rh1*a0/rho0
+    case(EqnLEE) ; write(inriaSol,'("2 2 1")')    ! {u1, v1, w1 }, x1=rh1*a0/rho0
     case(EqnEUL) ; write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v, rho w}, rho E
     case default
       write(*,'(/"Choice equation not possible: ",i0)')ob%equation
     end select
     write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
-    do iCell=1,nCell
+    do iCell=1,ob%nCell
       if( ob%cellType(iCell)==iType )then
         deg0=ob%deg(iCell)-1 !> juste avant
         nDeg=ob%deg(iCell+1)-ob%deg(iCell)
@@ -576,13 +576,13 @@ subroutine writeInriaHO(ob)
     write(inriaSol,'(/"HOSolAtTetrahedraP",i1)')ob%meshOrder
     write(inriaSol,'(i0)')nCell
     select case(ob%equation)
-    case(EqnLEE) ; write(inriaSol,'("2 2 1")')  ! {u1, v1, w1 }, x1=rh1*a0/rho0
+    case(EqnLEE) ; write(inriaSol,'("2 2 1")')    ! {u1, v1, w1 }, x1=rh1*a0/rho0
     case(EqnEUL) ; write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v, rho w}, rho E
     case default
       write(*,'(/"Choice equation not possible: ",i0)')ob%equation
     end select
     write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
-    do iCell=1,nCell
+    do iCell=1,ob%nCell
       if( ob%cellType(iCell)==iType )then
         deg0=ob%deg(iCell)-1 !> juste avant
         nDeg=ob%deg(iCell+1)-ob%deg(iCell)
@@ -595,6 +595,8 @@ subroutine writeInriaHO(ob)
   nCell=ob%nQ4
   if( .not.nCell==0 )then
     nNod=size(ob%Q4uvw,2)
+    print '("nQ4=",i0)',ob%nQ4
+    print '("nNod=",i0)',nNod
     !>
     select case(ob%meshOrder)
     case(1) ; iType=quad
@@ -606,16 +608,16 @@ subroutine writeInriaHO(ob)
       stop
     end select
     !>
-    write(inriaSol,'(/"HOSolAtQuadrilateralsP",i1)')ob%meshOrder
+    write(inriaSol,'(/"HOSolAtQuadrilateralsQ",i1)')ob%meshOrder
     write(inriaSol,'(i0)')nCell
     select case(ob%equation)
-    case(EqnLEE) ; write(inriaSol,'("2 2 1")')  ! {u1, v1}, x1=rh1*a0/rho0
+    case(EqnLEE) ; write(inriaSol,'("2 2 1")')    ! {u1, v1}, x1=rh1*a0/rho0
     case(EqnEUL) ; write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v}, rho E
     case default
       write(*,'(/"Choice equation not possible: ",i0)')ob%equation
     end select
     write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
-    do iCell=1,nCell
+    do iCell=1,ob%nCell
       if( ob%cellType(iCell)==iType )then
         deg0=ob%deg(iCell)-1 !> juste avant
         nDeg=ob%deg(iCell+1)-ob%deg(iCell)
@@ -628,6 +630,8 @@ subroutine writeInriaHO(ob)
   nCell=ob%nT3
   if( .not.nCell==0 )then
     nNod=size(ob%T3uvw,2)
+    print '("nT3=",i0)',ob%nT3
+    print '("nNod=",i0)',nNod
     !>
     select case(ob%meshOrder)
     case(1) ; iType=triangle
@@ -642,13 +646,13 @@ subroutine writeInriaHO(ob)
     write(inriaSol,'(/"HOSolAtTrianglesP",i1)')ob%meshOrder
     write(inriaSol,'(i0)')nCell
     select case(ob%equation)
-    case(EqnLEE) ; write(inriaSol,'("2 2 1")')  ! {u1, v1}, x1=rh1*a0/rho0
+    case(EqnLEE) ; write(inriaSol,'("2 2 1")')    ! {u1, v1}, x1=rh1*a0/rho0
     case(EqnEUL) ; write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v}, rho E
     case default
       write(*,'(/"Choice equation not possible: ",i0)')ob%equation
     end select
     write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
-    do iCell=1,nCell
+    do iCell=1,ob%nCell
       if( ob%cellType(iCell)==iType )then
         deg0=ob%deg(iCell)-1 !> juste avant
         nDeg=ob%deg(iCell+1)-ob%deg(iCell)
