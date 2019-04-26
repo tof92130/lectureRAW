@@ -495,8 +495,8 @@ subroutine writeInriaHO(ob)
     nNod=size(uvw,2)
     write(inriaSol,'(i0)')nNod
     do iNod=1,nNod
-     !write(inriaSol,'(*(g0,1x))') uvw(4,iNod),uvw(1:3,iNod)                                        !> Barycentrique Coordinates
-      write(inriaSol,'(*(g0,1x))') uvw(1:4,iNod)                                                    !> Nodal Coordinates
+      write(inriaSol,'(*(g0,1x))') uvw(4,iNod),uvw(1:3,iNod)                                        !> Barycentric Coordinates
+     !write(inriaSol,'(*(g0,1x))') uvw(1:4,iNod)                                                    !> Nodal Coordinates
     enddo
     uvw=>null()
   endif
@@ -518,8 +518,8 @@ subroutine writeInriaHO(ob)
     nNod=size(uvw,2)
     write(inriaSol,'(i0)')nNod
     do iNod=1,nNod
-     !write(inriaSol,'(*(g0,1x))') uvw(3,iNod),uvw(1:1,iNod)                                        !> Barycentrique Coordinates
-      write(inriaSol,'(*(g0,1x))') uvw(1:3,iNod)                                                    !> Nodal Coordinates
+      write(inriaSol,'(*(g0,1x))') uvw(3,iNod),uvw(1:2,iNod)                                        !> Barycentric Coordinates
+     !write(inriaSol,'(*(g0,1x))') uvw(1:3,iNod)                                                    !> Nodal Coordinates
     enddo
     uvw=>null()
   endif
