@@ -647,19 +647,14 @@ subroutine writeInriaHO(ob)
     write(inriaSol,'(/"HOSolAtTrianglesP",i1)')ob%meshOrder
     write(inriaSol,'(i0)')nCell
     select case(ob%equation)
-    case(EqnLEE) ; write(inriaSol,'("2 2 1")')    ! {u1, v1}, x1=rh1*a0/rho0
+!    case(EqnLEE) ; write(inriaSol,'("1 1")')    !  x1=rh1*a0/rho0, {u1,v1}
+    case(EqnLEE) ; write(inriaSol,'("2 2 1")')    ! {u1,v1}, x1=rh1*a0/rho0
     case(EqnEUL) ; write(inriaSol,'("3 1 2 1")')  ! rho, {rho u, rho v}, rho E
     case default
       write(*,'(/"Choice equation not possible: ",i0)')ob%equation
     end select
     write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
-    do iCell=1,ob%nCell
-      if( ob%cellType(iCell)==iType )then
-        deg0=ob%deg(iCell)-1 !> juste avant
-        nDeg=ob%deg(iCell+1)-ob%deg(iCell)
-        write(inriaSol,'(*(g0,1x))')ob%dsol(:,deg0+1:deg0+nDeg)
-      endif        
-    enddo    
+    call writeBlock()
   endif
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
@@ -672,6 +667,31 @@ subroutine writeInriaHO(ob)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   return
+contains
+  
+  subroutine writeBlock()
+    if( ob%solutionIsReal )then
+      do iCell=1,ob%nCell
+        if( ob%cellType(iCell)==iType )then
+          deg0=ob%deg(iCell)-1 !> juste avant
+          nDeg=ob%deg(iCell+1)-ob%deg(iCell)
+         !write(inriaSol,'(*(g0,1x))')ob%dsol(3,deg0+1:deg0+nDeg)
+          write(inriaSol,'(*(g0,1x))')ob%dsol(:,deg0+1:deg0+nDeg)
+        endif        
+      enddo    
+    else
+      do iCell=1,ob%nCell
+        if( ob%cellType(iCell)==iType )then
+          deg0=ob%deg(iCell)-1 !> juste avant
+          nDeg=ob%deg(iCell+1)-ob%deg(iCell)
+          write(inriaSol,'(*(g0,1x))')real(ob%zsol(:,deg0+1:deg0+nDeg),kind=8)
+        endif        
+      enddo    
+    endif
+    
+    return
+  end subroutine writeBlock
+    
 end subroutine writeInriaHO
 
 
