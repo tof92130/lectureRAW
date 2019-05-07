@@ -126,15 +126,18 @@ subroutine readRaw(ob)
   character(80)    :: buffer  
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   print '(/"Reading: ",a)',trim(ob%file)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   open(unit=250            ,&
   &    file=trim(ob%file)  ,&
   &    form='unformatted'  ,&
   &    recordtype='stream' ,&
   &    action='read'       ,&
   &    status='old'         )
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   !> Header
@@ -261,9 +264,11 @@ subroutine readRaw(ob)
   if( ob%solutionIsReal )then
     allocate(ob%dsol(1:ob%ker,1:ob%nDeg))
     read(unit=250) ((ob%dsol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%nDeg)
+    write(*,'("Readed ob%dsol size(ob%dsol)=",i0,"x",i0)')size(ob%dsol,1),size(ob%dsol,2)
   else
     allocate(ob%zsol(1:ob%ker,1:ob%nDeg))
     read(unit=250) ((ob%zsol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%nDeg)
+    write(*,'("Readed ob%zsol size(ob%zsol)=",i0,"x",i0)')size(ob%zsol,1),size(ob%zsol,2)
   endif
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
@@ -273,38 +278,42 @@ subroutine readRaw(ob)
     if( ob%solution )then
       readingNodesPositions : do
         read(unit=250)buffer ; write(*,'(/a)')trim(buffer) ; if( trim(buffer)=="End" )exit readingNodesPositions
-        read(unit=250)iOrd 
+        read(unit=250)iOrd
         read(unit=250)Strd
         read(unit=250)nNod
         write(*,'("iOrd=",i0," Strd=",i0," nNod=",i0)')iOrd,Strd,nNod
         
         select case(trim(buffer))
-        case("HexahedraQ1NodesPositions"     ,"HexahedraQ2NodesPositions"     ,"HexahedraQ3NodesPositions"     ) ; ob%H6uvw=>uvw
+        case("HexahedraQ1NodesPositions"     ,"HexahedraQ2NodesPositions"     ,"HexahedraQ3NodesPositions"     ) ! ob%H6uvw=>uvw
           allocate(ob%H6uvw(1:strd,1:nNod))
           read(250)ob%H6uvw(1:strd,1:nNod)
-        case("PrismsP1NodesPositions"        ,"PrismsP2NodesPositions"        ,"PrismsP3NodesPositions"        ) ; ob%W5uvw=>uvw
+          uvw=>ob%H6uvw
+        case("PrismsP1NodesPositions"        ,"PrismsP2NodesPositions"        ,"PrismsP3NodesPositions"        ) ! ob%W5uvw=>uvw
           allocate(ob%W5uvw(1:strd,1:nNod))
           read(250)ob%W5uvw(1:strd,1:nNod)
-        case("PyramidsP1NodesPositions"      ,"PyramidsP2NodesPositions"      ,"PyramidsP3NodesPositions"      ) ; ob%P5uvw=>uvw
+          uvw=>ob%W5uvw
+        case("PyramidsP1NodesPositions"      ,"PyramidsP2NodesPositions"      ,"PyramidsP3NodesPositions"      ) ! ob%P5uvw=>uvw
         case("TetrahedraP1NodesPositions"    ,"TetrahedraP2NodesPositions"    ,"TetrahedraP3NodesPositions"    )
           allocate(ob%T4uvw(1:strd,1:nNod))
           read(250)ob%T4uvw(1:strd,1:nNod)
-        case("QuadrilateralsQ1NodesPositions","QuadrilateralsQ2NodesPositions","QuadrilateralsQ3NodesPositions") ; ob%Q4uvw=>uvw 
+          uvw=>ob%Q4uvw
+        case("QuadrilateralsQ1NodesPositions","QuadrilateralsQ2NodesPositions","QuadrilateralsQ3NodesPositions") ! ob%Q4uvw=>uvw 
           allocate(ob%Q4uvw(1:strd,1:nNod))
           read(250)ob%Q4uvw(1:strd,1:nNod)
-        case("TrianglesP1NodesPositions"     ,"TrianglesP2NodesPositions"     ,"TrianglesP3NodesPositions"     ) ; ob%T3uvw=>uvw
+          uvw=>ob%H6uvw
+        case("TrianglesP1NodesPositions"     ,"TrianglesP2NodesPositions"     ,"TrianglesP3NodesPositions"     ) ! ob%T3uvw=>uvw
           allocate(ob%T3uvw(1:strd,1:nNod))
           read(250)ob%T3uvw(1:strd,1:nNod)
+          uvw=>ob%T3uvw
         case default
           write(*,'(/"Choice geometry not possible: ",a)')trim(buffer)
           stop      
         end select
         
-        !read(250)uvw(1:strd,1:nNod)
         !do iNod=1,nNod
         !  print '("uvw=",*(f12.5,1x))',uvw(1:strd,iNod)
         !enddo
-        !uvw=>null()
+        uvw=>null()
         
       enddo readingNodesPositions
     endif
@@ -350,6 +359,10 @@ subroutine readRaw(ob)
   enddo
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  
+  print '(/"End Reading: ",a)',trim(ob%file)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
   return
 end subroutine readRaw
 
@@ -361,8 +374,9 @@ subroutine writeRaw(ob)
   character(80)    :: buffer
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   print '(/"Writing: ",a)',trim(ob%file)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   open(unit=250            ,&
@@ -444,6 +458,10 @@ subroutine writeRaw(ob)
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   close(unit=250)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  print '(/"End Writing: ",a)',trim(ob%file)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   return
@@ -666,6 +684,10 @@ subroutine writeInriaHO(ob)
   close(inriaSol)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  print '(/"End Writing Inria HO solution: ",a)',trim(file)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
   return
 contains
   
@@ -743,14 +765,7 @@ subroutine writeInriaHOBinary(ob)
     case default ; stop "HOSolAtHexahedra ob%meshOrder>3 not implemented"
     end select
     
-    iErr=GmfSetKwd(inriaSol,GmfKey,nNod)
-    iErr=GmfSetBlock(                                    &
-    &    inriaSol                                       ,&
-    &    GmfKey                                         ,&
-    &    int(   1,kind=8)                               ,&
-    &    int(nNod,kind=8)                               ,&
-    &    0, %val(0), %val(0)                            ,&
-    &    GmfDoubleVec,size(uvw,1), uvw(1,1), uvw(1,nNod) )
+    call writeNodeBlock()
     
     uvw(:,:)=2d0*uvw(:,:)-1d0                                                                       !> \in [-1,+1]^3  Space
     uvw=>null()
@@ -777,14 +792,7 @@ subroutine writeInriaHOBinary(ob)
     case default ; stop "HOSolAtTetrahedra ob%meshOrder>3 not implemented"
     end select
     
-    iErr=GmfSetKwd(inriaSol,GmfKey,nNod)
-    iErr=GmfSetBlock(                                    &
-    &    inriaSol                                       ,&
-    &    GmfKey                                         ,&
-    &    int(   1,kind=8)                               ,&
-    &    int(nNod,kind=8)                               ,&
-    &    0, %val(0), %val(0)                            ,&
-    &    GmfDoubleVec,size(uvw,1), uvw(1,1), uvw(1,nNod) )
+    call writeNodeBlock()
     
     do iNod=1,nNod                                                                                  !> {u,v,w,1-u-v-w} Space
       x=uvw(1,iNod)
@@ -811,14 +819,7 @@ subroutine writeInriaHOBinary(ob)
     case default ; stop "HOSolAtQuadrilaterals ob%meshOrder>3 not implemented"
     end select
     
-    iErr=GmfSetKwd(inriaSol,GmfKey,nNod)
-    iErr=GmfSetBlock(                                    &
-    &    inriaSol                                           ,&
-    &    GmfKey                                         ,&
-    &    int(   1,kind=8)                               ,&
-    &    int(nNod,kind=8)                               ,&
-    &    0, %val(0), %val(0)                            ,&
-    &    GmfDoubleVec,size(uvw,1), uvw(1,1), uvw(1,nNod) )
+    call writeNodeBlock()
     
     uvw(:,:)=2d0*uvw(:,:)-1d0                                                                       !> \in [-1,1]^2 Space
     
@@ -845,14 +846,7 @@ subroutine writeInriaHOBinary(ob)
     case default ; stop "HOSolAtTetrahedra ob%meshOrder>3 not implemented"
     end select
     
-    iErr=GmfSetKwd(inriaSol,GmfKey,nNod)
-    iErr=GmfSetBlock(                                    &
-    &    inriaSol                                       ,&
-    &    GmfKey                                         ,&
-    &    int(   1,kind=8)                               ,&
-    &    int(nNod,kind=8)                               ,&
-    &    0, %val(0), %val(0)                            ,&
-    &    GmfDoubleVec,size(uvw,1), uvw(1,1), uvw(1,nNod) )
+    call writeNodeBlock()
     
     do iNod=1,nNod                                                                                  !> {u,v,1-u-v} Space
       x=uvw(1,iNod)
@@ -895,7 +889,7 @@ subroutine writeInriaHOBinary(ob)
     case default ; stop "ob%meshOrder>3 not implemented"
     end select
     
-    call writeBlock()
+    call writeSoluBlock()
         
     iDeg=iDeg+nDeg
     iCell0=iCell0+nCell
@@ -914,7 +908,7 @@ subroutine writeInriaHOBinary(ob)
     case default ; stop "ob%meshOrder>3 not implemented"
     end select
     
-    call writeBlock()
+    call writeSoluBlock()
     
     iDeg=iDeg+nDeg
     iCell0=iCell0+nCell
@@ -933,7 +927,7 @@ subroutine writeInriaHOBinary(ob)
     case default ; stop "ob%meshOrder>3 not implemented"
     end select
     
-    call writeBlock()
+    call writeSoluBlock()
     
     iDeg=iDeg+nDeg
     iCell0=iCell0+nCell
@@ -952,7 +946,7 @@ subroutine writeInriaHOBinary(ob)
     case default ; stop "ob%meshOrder>3 not implemented"
     end select
     
-    call writeBlock()
+    call writeSoluBlock()
     
     iDeg=iDeg+nDeg
     iCell0=iCell0+nCell
@@ -964,10 +958,30 @@ subroutine writeInriaHOBinary(ob)
   iErr=GmfCloseMesh(inriaSol)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  print '(/"End Writing Inria HO solution: ",a)',trim(file)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
   return
 contains
   
-  subroutine writeBlock()
+  subroutine writeNodeBlock()
+    !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    iErr=GmfSetKwd(inriaSol,GmfKey,nNod)
+    iErr=GmfSetBlock(                                    &
+    &    inriaSol                                       ,&
+    &    GmfKey                                         ,&
+    &    int(   1,kind=8)                               ,&
+    &    int(nNod,kind=8)                               ,&
+    &    0, %val(0), %val(0)                            ,&
+    &    GmfDoubleVec,size(uvw,1), uvw(1,1), uvw(1,nNod) )
+    !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>    
+    return
+  end subroutine writeNodeBlock
+  
+  subroutine writeSoluBlock()
     !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     real(8), pointer :: solu0(:,:)
     real(8), pointer :: solu1(:,:)  
@@ -1001,7 +1015,7 @@ contains
     !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     return
-  end subroutine writeBlock
+  end subroutine writeSoluBlock
     
 end subroutine writeInriaHOBinary
 
@@ -1036,14 +1050,33 @@ subroutine displaySol(ob)
   type(mesDonnees), intent(in) :: ob
   !>
   integer                      :: iCell,iDeg
+  integer                      :: iKer
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  
+  
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  iCell=1
-  do iDeg=1,ob%nDeg
-    if( iDeg>ob%deg(iCell+1)-1 )iCell=iCell+1
-    print '(3x,"iCell=",i10," iDeg=",i10," xyz=",5(e22.15,1x))',iCell,iDeg,ob%dsol(1:ob%ker,iDeg)
-  enddo
+  print '(/">>> displaySol")'
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  if( ob%solutionIsReal )then
+    do iKer=1,ob%ker
+      print '(4x,"comp "i1,": min/max=",e22.15,"/",e22.15)',iKer,minval(ob%dsol(iKer,:)),maxval(ob%dsol(iKer,:)) 
+    enddo
+  endif
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !iCell=1
+  !do iDeg=1,ob%nDeg
+  !  if( iDeg>ob%deg(iCell+1)-1 )iCell=iCell+1
+  !  print '(3x,"iCell=",i10," iDeg=",i10," xyz=",5(e22.15,1x))',iCell,iDeg,ob%dsol(1:ob%ker,iDeg)
+  !enddo
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  print '("<<< displaySol")'
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
   return
 end subroutine displaySol
 
@@ -1385,6 +1418,32 @@ subroutine compareRAW()
   return
 end subroutine compareRAW
 
+subroutine exportInriaHO()
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  use mesProcedures
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  implicit none
+  type(mesDonnees) :: ob
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  print '(/"usage: lecture <file.dat>")'
+  print '(4x,"file: solutions")'
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  if( command_argument_count()>=1 )then
+    call get_command_argument(number=1,value =ob%file   )
+  else
+    write(*,'(/"file: ")',advance='no') ; read(*,'(a)')ob%file
+  endif
+  call readRaw           (ob=ob)
+  call displaySol        (ob=ob)
+ !call writeInriaHO      (ob=ob)
+  call writeInriaHOBinary(ob=ob)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  return
+end subroutine exportInriaHO
+
 
 subroutine replaceRAW()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1667,25 +1726,8 @@ program main
   !call readPosition()
   !call replaceRAW()
   
-  
-  block
-  type(mesDonnees) :: ob
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  print '(/"usage: lecture <file.dat>")'
-  print '(4x,"file: solutions")'
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  if( command_argument_count()>=1 )then
-    call get_command_argument(number=1,value =ob%file   )
-  else
-    write(*,'(/"file: ")',advance='no') ; read(*,'(a)')ob%file
-  endif
-  call readRaw           (ob=ob)
-  call writeInriaHO      (ob=ob)
-  call writeInriaHOBinary(ob=ob)
-  end block
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
+  call exportInriaHO()
+    
 end program main
 
 
