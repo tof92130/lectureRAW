@@ -66,7 +66,7 @@ module mesProcedures
     integer               :: iter
     integer               :: iCell,nCell
     integer               :: iVar,iDeg
-    integer               :: ker=5
+    integer               :: ker
     integer               :: count0
     integer               :: count1
     integer               :: nDeg
@@ -693,6 +693,318 @@ contains
   end subroutine writeBlock
     
 end subroutine writeInriaHO
+
+
+subroutine writeInriaHOBinary(ob)
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  use iso_c_binding , only: c_loc,c_f_pointer
+  use libMeshb7
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  type(mesDonnees) :: ob
+  !>
+  integer          :: l
+  integer(8)       :: inriaSol
+  integer          :: iCell,nCell,iType,iCell0
+  integer          :: iNod,nNod
+  integer          :: deg0,iDeg,nDeg
+  real(8), pointer :: uvw(:,:)
+  character(256)   :: file
+  integer          :: iErr
+  integer          :: GmfKey
+  integer          :: nFld,kind(1:20)
+  real(8)          :: x
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  l=index(ob%file,'.',.true.)-1 ; file=ob%file(1:l)//'.solb'
+  print '(/"Writing Inria HO solution: ",a)',trim(file)
+  
+  select case(ob%geometry)
+  case(Geo2D,GeoAx) ; inriaSol=GmfOpenMesh(trim(file), GmfWrite, GmfDouble, 2)
+  case(Geo3D)       ; inriaSol=GmfOpenMesh(trim(file), GmfWrite, GmfDouble, 3)
+  end select
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> HO NodesPositions
+  
+  HexahedraNodesPositions: if( .not.ob%nH6==0 )then
+    uvw=>ob%H6uvw
+    nNod=size(uvw,2)
+    uvw(:,:)=(uvw(:,:)+1d0)*5d-1                                                                    !> \in [0,1]^3 INRIA
+    
+    select case(ob%meshOrder)
+    case(1) ; GmfKey=GmfHOSolAtHexahedraQ1NodesPositions
+    case(2) ; GmfKey=GmfHOSolAtHexahedraQ2NodesPositions
+    case(3) ; GmfKey=GmfHOSolAtHexahedraQ3NodesPositions
+    case default ; stop "HOSolAtHexahedra ob%meshOrder>3 not implemented"
+    end select
+    
+    iErr=GmfSetKwd(inriaSol,GmfKey,nNod)
+    iErr=GmfSetBlock(                                    &
+    &    inriaSol                                       ,&
+    &    GmfKey                                         ,&
+    &    int(   1,kind=8)                               ,&
+    &    int(nNod,kind=8)                               ,&
+    &    0, %val(0), %val(0)                            ,&
+    &    GmfDoubleVec,size(uvw,1), uvw(1,1), uvw(1,nNod) )
+    
+    uvw(:,:)=2d0*uvw(:,:)-1d0                                                                       !> \in [-1,+1]^3  Space
+    uvw=>null()
+  endif HexahedraNodesPositions
+  !<<<
+  
+  !>>>
+  TetrahedraNodesPositions: if( .not.ob%nT4==0 )then
+    uvw=>ob%T4uvw
+    nNod=size(uvw,2)
+    
+    do iNod=1,nNod                                                                                  !> {1-u-v-w,u,v,w} INRIA
+      x=uvw(4,iNod)
+      uvw(4,iNod)=uvw(3,iNod)
+      uvw(3,iNod)=uvw(2,iNod)
+      uvw(2,iNod)=uvw(1,iNod)
+      uvw(1,iNod)=x
+    enddo
+    
+    select case(ob%meshOrder)
+    case(1) ; GmfKey=GmfHOSolAtTetrahedraP1NodesPositions
+    case(2) ; GmfKey=GmfHOSolAtTetrahedraP2NodesPositions
+    case(3) ; GmfKey=GmfHOSolAtTetrahedraP3NodesPositions
+    case default ; stop "HOSolAtTetrahedra ob%meshOrder>3 not implemented"
+    end select
+    
+    iErr=GmfSetKwd(inriaSol,GmfKey,nNod)
+    iErr=GmfSetBlock(                                    &
+    &    inriaSol                                       ,&
+    &    GmfKey                                         ,&
+    &    int(   1,kind=8)                               ,&
+    &    int(nNod,kind=8)                               ,&
+    &    0, %val(0), %val(0)                            ,&
+    &    GmfDoubleVec,size(uvw,1), uvw(1,1), uvw(1,nNod) )
+    
+    do iNod=1,nNod                                                                                  !> {u,v,w,1-u-v-w} Space
+      x=uvw(1,iNod)
+      uvw(1,iNod)=uvw(2,iNod)
+      uvw(2,iNod)=uvw(3,iNod)
+      uvw(3,iNod)=uvw(4,iNod)
+      uvw(4,iNod)=x
+    enddo
+    
+    uvw=>null()
+  endif TetrahedraNodesPositions
+  !<<<
+  
+  !>>>
+  QuadrilateralsNodesPositions: if( .not.ob%nQ4==0 )then
+    uvw=>ob%Q4uvw
+    uvw(:,:)=(uvw(:,:)+1d0)*5d-1                                                                    !> \in [0,1]^2 INRIA
+    nNod=size(uvw,2)
+    
+    select case(ob%meshOrder)
+    case(1) ; GmfKey=GmfHOSolAtQuadrilateralsQ1NodesPositions
+    case(2) ; GmfKey=GmfHOSolAtQuadrilateralsQ2NodesPositions
+    case(3) ; GmfKey=GmfHOSolAtQuadrilateralsQ3NodesPositions
+    case default ; stop "HOSolAtQuadrilaterals ob%meshOrder>3 not implemented"
+    end select
+    
+    iErr=GmfSetKwd(inriaSol,GmfKey,nNod)
+    iErr=GmfSetBlock(                                    &
+    &    inriaSol                                           ,&
+    &    GmfKey                                         ,&
+    &    int(   1,kind=8)                               ,&
+    &    int(nNod,kind=8)                               ,&
+    &    0, %val(0), %val(0)                            ,&
+    &    GmfDoubleVec,size(uvw,1), uvw(1,1), uvw(1,nNod) )
+    
+    uvw(:,:)=2d0*uvw(:,:)-1d0                                                                       !> \in [-1,1]^2 Space
+    
+    uvw=>null()
+  endif QuadrilateralsNodesPositions
+  !<<<
+  
+  !>>>
+  TrianglesNodesPositions: if( .not.ob%nT3==0 )then
+    uvw=>ob%T3uvw
+    nNod=size(uvw,2)
+    
+    do iNod=1,nNod                                                                                  !> {1-u-v,u,v} INRIA
+      x=uvw(3,iNod)
+      uvw(3,iNod)=uvw(2,iNod)
+      uvw(2,iNod)=uvw(1,iNod)
+      uvw(1,iNod)=x
+    enddo
+    
+    select case(ob%meshOrder)
+    case(1) ; GmfKey=GmfHOSolAtTrianglesP1NodesPositions
+    case(2) ; GmfKey=GmfHOSolAtTrianglesP2NodesPositions
+    case(3) ; GmfKey=GmfHOSolAtTrianglesP3NodesPositions
+    case default ; stop "HOSolAtTetrahedra ob%meshOrder>3 not implemented"
+    end select
+    
+    iErr=GmfSetKwd(inriaSol,GmfKey,nNod)
+    iErr=GmfSetBlock(                                    &
+    &    inriaSol                                       ,&
+    &    GmfKey                                         ,&
+    &    int(   1,kind=8)                               ,&
+    &    int(nNod,kind=8)                               ,&
+    &    0, %val(0), %val(0)                            ,&
+    &    GmfDoubleVec,size(uvw,1), uvw(1,1), uvw(1,nNod) )
+    
+    do iNod=1,nNod                                                                                  !> {u,v,1-u-v} Space
+      x=uvw(1,iNod)
+      uvw(1,iNod)=uvw(2,iNod)
+      uvw(2,iNod)=uvw(3,iNod)
+      uvw(3,iNod)=x
+    enddo
+    
+    uvw=>null()
+  endif TrianglesNodesPositions
+  !<<<
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> HO Solutions
+  
+  !>>> nFld and kind
+  select case(ob%equation)
+  case(EqnLEE) ; nFld=2 ; kind(1:nFld)=[GmfVec,GmfSca]         ! {u1, v1, w1 }, x1=rh1*a0/rho0
+  case(EqnEUL) ; nFld=3 ; kind(1:nFld)=[GmfSca,GmfVec,GmfSca]  ! rho, {rho u, rho v, rho w}, rho E
+  case default
+    write(*,'(/"Choice equation not possible: ",i0)')ob%equation
+  end select  
+  !<<< nFld and kind
+  
+  !>>> Intialisation
+  iCell0=1
+  iDeg=0
+  !<<<
+  
+  !>>> HOSolAtHexahedra
+  nCell=ob%nH6
+  if( .not.nCell==0 )then
+    nNod=size(ob%H6uvw,2) ; nDeg=nCell*nNod
+    
+    select case(ob%meshOrder)
+    case(1) ; GmfKey=GmfHOSolAtHexahedraQ1
+    case(2) ; GmfKey=GmfHOSolAtHexahedraQ2
+    case(3) ; GmfKey=GmfHOSolAtHexahedraQ3
+    case default ; stop "ob%meshOrder>3 not implemented"
+    end select
+    
+    call writeBlock()
+        
+    iDeg=iDeg+nDeg
+    iCell0=iCell0+nCell
+  endif
+  !<<< HOSolAtHexahedra
+  
+  !>>> HOSolAtTetrahedra
+  nCell=ob%nT4
+  if( .not.nCell==0 )then
+    nNod=size(ob%T4uvw,2) ; nDeg=nCell*nNod
+    
+    select case(ob%meshOrder)
+    case(1) ; GmfKey=GmfHOSolAtTetrahedraP1
+    case(2) ; GmfKey=GmfHOSolAtTetrahedraP2
+    case(3) ; GmfKey=GmfHOSolAtTetrahedraP3
+    case default ; stop "ob%meshOrder>3 not implemented"
+    end select
+    
+    call writeBlock()
+    
+    iDeg=iDeg+nDeg
+    iCell0=iCell0+nCell
+  endif
+  !<<< HOSolAtTetrahedra
+  
+  !>>> HOSolAtQuadrilaterals
+  nCell=ob%nQ4
+  if( .not.nCell==0 )then
+    nNod=size(ob%Q4uvw,2) ; nDeg=nCell*nNod
+    
+    select case(ob%meshOrder)
+    case(1) ; GmfKey=GmfHOSolAtQuadrilateralsQ1
+    case(2) ; GmfKey=GmfHOSolAtQuadrilateralsQ2
+    case(3) ; GmfKey=GmfHOSolAtQuadrilateralsQ3
+    case default ; stop "ob%meshOrder>3 not implemented"
+    end select
+    
+    call writeBlock()
+    
+    iDeg=iDeg+nDeg
+    iCell0=iCell0+nCell
+  endif
+  !<<<
+  
+  !>>> HOSolAtTriangles
+  nCell=ob%nT3
+  if( .not.nCell==0 )then
+    nNod=size(ob%T3uvw,2) ; nDeg=nCell*nNod
+    
+    select case(ob%meshOrder)
+    case(1) ; GmfKey=GmfHOSolAtTrianglesP1
+    case(2) ; GmfKey=GmfHOSolAtTrianglesP2
+    case(3) ; GmfKey=GmfHOSolAtTrianglesP3
+    case default ; stop "ob%meshOrder>3 not implemented"
+    end select
+    
+    call writeBlock()
+    
+    iDeg=iDeg+nDeg
+    iCell0=iCell0+nCell
+  endif
+  !<<< HOSolAtTriangles  
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  iErr=GmfCloseMesh(inriaSol)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  return
+contains
+  
+  subroutine writeBlock()
+    !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    real(8), pointer :: solu0(:,:)
+    real(8), pointer :: solu1(:,:)  
+    !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>    
+    !print '("strd =",i0)',ob%ker
+    !print '("nNod =",i0)',nNod
+    !print '("nCell=",i0)',nCell
+    !print '("nDeg =",i0)',nDeg
+    !print '("size(ob%dsol)=",i0,"x",i0)',size(ob%dsol,1),size(ob%dsol,2)
+    !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    
+    !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>       
+    !> solu0(1:ob%ker,1:nNod*nCell)
+    solu0=>ob%dsol(1:ob%ker,iDeg+1:iDeg+nDeg)
+    
+    !> solu1(1:ob%ker*nNod,1:nCell)
+    call c_f_pointer(cptr=c_loc(solu0), fptr=solu1, shape=[ob%ker*nNod,nCell])
+    
+    iErr=GmfSetKwd(inriaSol,GmfKey,nCell,nFld,kind(1),ob%ord(iCell0),nNod)                          !> ob%ord(iCell0) car iso ordre
+    iErr=GmfSetBlock(                                          &
+    &    inriaSol                                             ,&
+    &    GmfKey                                               ,&
+    &    int(    1,kind=8)                                    ,&
+    &    int(nCell,kind=8)                                    ,&
+    &    0, %val(0), %val(0)                                  ,&
+    &    GmfDoubleVec,ob%ker*nNod, solu1(1,1), solu1(1,nCell)  )
+    
+    solu0=>null()
+    solu1=>null()
+    !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    
+    return
+  end subroutine writeBlock
+    
+end subroutine writeInriaHOBinary
+
 
 
 subroutine display(ob)
@@ -1368,8 +1680,9 @@ program main
   else
     write(*,'(/"file: ")',advance='no') ; read(*,'(a)')ob%file
   endif
-  call readRaw     (ob=ob)
-  call writeInriaHO(ob=ob)
+  call readRaw           (ob=ob)
+  call writeInriaHO      (ob=ob)
+  call writeInriaHOBinary(ob=ob)
   end block
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
