@@ -987,36 +987,43 @@ contains
     real(8), pointer :: solu1(:,:)  
     !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>    
-    !print '("strd =",i0)',ob%ker
-    !print '("nNod =",i0)',nNod
-    !print '("nCell=",i0)',nCell
-    !print '("nDeg =",i0)',nDeg
-    !print '("size(ob%dsol)=",i0,"x",i0)',size(ob%dsol,1),size(ob%dsol,2)
+    print '("strd =",i0)',ob%ker
+    print '("nNod =",i0)',nNod
+    print '("nCell=",i0)',nCell
+    print '("nDeg =",i0)',nDeg
+    print '("size(ob%dsol)=",i0,"x",i0)',size(ob%dsol,1),size(ob%dsol,2)
+    print '("size(ob%zsol)=",i0,"x",i0)',size(ob%zsol,1),size(ob%zsol,2)
     !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>       
     !> solu0(1:ob%ker,1:nNod*nCell)
-    solu0=>ob%dsol(1:ob%ker,iDeg+1:iDeg+nDeg)
     
-    !> solu1(1:ob%ker*nNod,1:nCell)
-    call c_f_pointer(cptr=c_loc(solu0), fptr=solu1, shape=[ob%ker*nNod,nCell])
-    
-    iErr=GmfSetKwd(inriaSol,GmfKey,nCell,nFld,kind(1),ob%ord(iCell0),nNod)                          !> ob%ord(iCell0) car iso ordre
-    iErr=GmfSetBlock(                                          &
-    &    inriaSol                                             ,&
-    &    GmfKey                                               ,&
-    &    int(    1,kind=8)                                    ,&
-    &    int(nCell,kind=8)                                    ,&
-    &    0, %val(0), %val(0)                                  ,&
-    &    GmfDoubleVec,ob%ker*nNod, solu1(1,1), solu1(1,nCell)  )
-    
-    solu0=>null()
-    solu1=>null()
+    if( ob%solutionIsReal )then
+      solu0=>ob%dsol(1:ob%ker,iDeg+1:iDeg+nDeg)
+      
+      !> solu1(1:ob%ker*nNod,1:nCell)
+      call c_f_pointer(cptr=c_loc(solu0), fptr=solu1, shape=[ob%ker*nNod,nCell])
+      
+      iErr=GmfSetKwd(inriaSol,GmfKey,nCell,nFld,kind(1),ob%ord(iCell0),nNod)                          !> ob%ord(iCell0) car iso ordre
+      iErr=GmfSetBlock(                                          &
+      &    inriaSol                                             ,&
+      &    GmfKey                                               ,&
+      &    int(    1,kind=8)                                    ,&
+      &    int(nCell,kind=8)                                    ,&
+      &    0, %val(0), %val(0)                                  ,&
+      &    GmfDoubleVec,ob%ker*nNod, solu1(1,1), solu1(1,nCell)  )
+      
+      solu0=>null()
+      solu1=>null()
+      
+    else
+      stop "stop @ writeSoluBlock solution is complex"
+    endif
     !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     return
   end subroutine writeSoluBlock
-    
+  
 end subroutine writeInriaHOBinary
 
 
@@ -1438,7 +1445,7 @@ subroutine exportInriaHO()
   endif
   call readRaw           (ob=ob)
   call displaySol        (ob=ob)
- !call writeInriaHO      (ob=ob)
+  call writeInriaHO      (ob=ob)
   call writeInriaHOBinary(ob=ob)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   return
