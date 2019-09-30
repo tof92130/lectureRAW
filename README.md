@@ -7,3 +7,6 @@ ifort lectureRAW.f90 ${LIBMESH_DIR}/lib/libMeshbf.7.a -I${LIBMESH_DIR}/include -
 
 ifort lectureRAW.f90 ${LIBMESH_DIR}/lib/libMeshbf.7.a -I${LIBMESH_DIR}/include -o lectureRAW -g  -traceback -check
 
+
+cp lectureRAW /Users/peyret/Applications/bin//lectureRaw
+

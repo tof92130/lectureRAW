@@ -266,6 +266,7 @@ subroutine readRaw(ob)
     read(unit=250) ((ob%dsol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%nDeg)
     write(*,'("Readed ob%dsol size(ob%dsol)=",i0,"x",i0)')size(ob%dsol,1),size(ob%dsol,2)
   else
+    allocate(ob%dsol(1:ob%ker,1:ob%nDeg))
     allocate(ob%zsol(1:ob%ker,1:ob%nDeg))
     read(unit=250) ((ob%zsol(iVar,iDeg),iVar=1,ob%ker),iDeg=1,ob%nDeg)
     write(*,'("Readed ob%zsol size(ob%zsol)=",i0,"x",i0)')size(ob%zsol,1),size(ob%zsol,2)
@@ -569,13 +570,7 @@ subroutine writeInriaHO(ob)
       write(*,'(/"Choice equation not possible: ",i0)')ob%equation
     end select
     write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
-    do iCell=1,ob%nCell
-      if( ob%cellType(iCell)==iType )then
-        deg0=ob%deg(iCell)-1 !> juste avant
-        nDeg=ob%deg(iCell+1)-ob%deg(iCell)
-        write(inriaSol,'(*(g0,1x))')ob%dsol(:,deg0+1:deg0+nDeg)
-      endif
-    enddo
+    call writeBlock()
   endif
   
   !> Tetrahedra
@@ -588,7 +583,7 @@ subroutine writeInriaHO(ob)
     case(2) ; iType=tetra2
     case(3) ; iType=tetra3
     case default
-      write(*,'(/"Mesh Order not possible with Tetrahedra")')
+      write(*,'(/"Mesh Order not possible with Tetrahedra meshOrder=",i0)')ob%meshOrder
       stop
     end select
     !>
@@ -601,13 +596,7 @@ subroutine writeInriaHO(ob)
       write(*,'(/"Choice equation not possible: ",i0)')ob%equation
     end select
     write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
-    do iCell=1,ob%nCell
-      if( ob%cellType(iCell)==iType )then
-        deg0=ob%deg(iCell)-1 !> juste avant
-        nDeg=ob%deg(iCell+1)-ob%deg(iCell)
-        write(inriaSol,'(*(g0,1x))')ob%dsol(:,deg0+1:deg0+nDeg)
-      endif        
-    enddo
+    call writeBlock()
   endif  
   
   !> Quadrilaterals
@@ -636,13 +625,7 @@ subroutine writeInriaHO(ob)
       write(*,'(/"Choice equation not possible: ",i0)')ob%equation
     end select
     write(inriaSol,'(i0,1x,i0)')ob%ord(1),nNod  ! on met ob%ord(1) car iso ordre
-    do iCell=1,ob%nCell
-      if( ob%cellType(iCell)==iType )then
-        deg0=ob%deg(iCell)-1 !> juste avant
-        nDeg=ob%deg(iCell+1)-ob%deg(iCell)
-        write(inriaSol,'(*(g0,1x))')ob%dsol(:,deg0+1:deg0+nDeg)
-      endif        
-    enddo    
+    call writeBlock()
   endif
   
   !> Triangles
@@ -706,7 +689,7 @@ contains
         if( ob%cellType(iCell)==iType )then
           deg0=ob%deg(iCell)-1 !> juste avant
           nDeg=ob%deg(iCell+1)-ob%deg(iCell)
-          write(inriaSol,'(*(g0,1x))')real(ob%zsol(:,deg0+1:deg0+nDeg),kind=8)
+          write(inriaSol,'(*(g0,1x))')abs(ob%zsol(:,deg0+1:deg0+nDeg))
         endif        
       enddo    
     endif
@@ -754,6 +737,7 @@ subroutine writeInriaHOBinary(ob)
   !> HO NodesPositions
   
   HexahedraNodesPositions: if( .not.ob%nH6==0 )then
+    print '(3x,"HexahedraNodesPositions")'
     uvw=>ob%H6uvw
     nNod=size(uvw,2)
     uvw(:,:)=(uvw(:,:)+1d0)*5d-1                                                                    !> \in [0,1]^3 INRIA
@@ -774,6 +758,7 @@ subroutine writeInriaHOBinary(ob)
   
   !>>>
   TetrahedraNodesPositions: if( .not.ob%nT4==0 )then
+    print '(3x,"TetrahedraNodesPositions")'
     uvw=>ob%T4uvw
     nNod=size(uvw,2)
     
@@ -808,6 +793,7 @@ subroutine writeInriaHOBinary(ob)
   
   !>>>
   QuadrilateralsNodesPositions: if( .not.ob%nQ4==0 )then
+    print '(3x,"QuadrilateralsNodesPositions")'
     uvw=>ob%Q4uvw
     uvw(:,:)=(uvw(:,:)+1d0)*5d-1                                                                    !> \in [0,1]^2 INRIA
     nNod=size(uvw,2)
@@ -829,6 +815,7 @@ subroutine writeInriaHOBinary(ob)
   
   !>>>
   TrianglesNodesPositions: if( .not.ob%nT3==0 )then
+    print '(3x,"TrianglesNodesPositions")'
     uvw=>ob%T3uvw
     nNod=size(uvw,2)
     
@@ -863,6 +850,8 @@ subroutine writeInriaHOBinary(ob)
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   !> HO Solutions
   
+  print '(3x,"HOSol Initialisation")'
+    
   !>>> nFld and kind
   select case(ob%equation)
   case(EqnLEE) ; nFld=2 ; kind(1:nFld)=[GmfVec,GmfSca]         ! {u1, v1, w1 }, x1=rh1*a0/rho0
@@ -880,6 +869,7 @@ subroutine writeInriaHOBinary(ob)
   !>>> HOSolAtHexahedra
   nCell=ob%nH6
   if( .not.nCell==0 )then
+    print '(3x,"HOSolAtHexahedra")'
     nNod=size(ob%H6uvw,2) ; nDeg=nCell*nNod
     
     select case(ob%meshOrder)
@@ -899,6 +889,7 @@ subroutine writeInriaHOBinary(ob)
   !>>> HOSolAtTetrahedra
   nCell=ob%nT4
   if( .not.nCell==0 )then
+    print '(3x,"HOSolAtTetrahedra")'
     nNod=size(ob%T4uvw,2) ; nDeg=nCell*nNod
     
     select case(ob%meshOrder)
@@ -918,6 +909,7 @@ subroutine writeInriaHOBinary(ob)
   !>>> HOSolAtQuadrilaterals
   nCell=ob%nQ4
   if( .not.nCell==0 )then
+    print '(3x,"HOSolAtQuadrilaterals")'
     nNod=size(ob%Q4uvw,2) ; nDeg=nCell*nNod
     
     select case(ob%meshOrder)
@@ -937,6 +929,7 @@ subroutine writeInriaHOBinary(ob)
   !>>> HOSolAtTriangles
   nCell=ob%nT3
   if( .not.nCell==0 )then
+    print '(3x,"HOSolAtTriangles")'
     nNod=size(ob%T3uvw,2) ; nDeg=nCell*nNod
     
     select case(ob%meshOrder)
@@ -987,45 +980,69 @@ contains
     real(8), pointer :: solu1(:,:)  
     !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>    
-    print '("strd =",i0)',ob%ker
-    print '("nNod =",i0)',nNod
-    print '("nCell=",i0)',nCell
-    print '("nDeg =",i0)',nDeg
-    print '("size(ob%dsol)=",i0,"x",i0)',size(ob%dsol,1),size(ob%dsol,2)
-    print '("size(ob%zsol)=",i0,"x",i0)',size(ob%zsol,1),size(ob%zsol,2)
+    print '(3x,"writeSoluBlock")'
+    print '(6x,"ord  ="     ,i0 )',ob%ord(iCell0)
+    print '(6x,"strd ="     ,i0 )',ob%ker
+    print '(6x,"nCell      =",i10)',nCell
+    print '(6x,"nNod       =",i10)',nNod
+    print '(6x,"nCell*nNod =",i10)',nCell*nNod
+    print '(6x,"nDeg       =",i10)',nDeg
     !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>       
     !> solu0(1:ob%ker,1:nNod*nCell)
     
     if( ob%solutionIsReal )then
+      print '(6x,"nDeg       =",i10)',nDeg
+      print '(6x,"size(dsol )=",i2,"x",i10)',size(ob%dsol,1),size(ob%dsol,2)
       solu0=>ob%dsol(1:ob%ker,iDeg+1:iDeg+nDeg)
+      print '(6x,"size(solu0)=",i10,"x",i10,"=",i10)',size(solu0,1),size(solu0,2),size(solu0)
+            
+    else
       
-      !> solu1(1:ob%ker*nNod,1:nCell)
-      call c_f_pointer(cptr=c_loc(solu0), fptr=solu1, shape=[ob%ker*nNod,nCell])
+      block
+      integer :: jDeg
+      print '(6x,"size(zsol )=",i2,"x",i0)',size(ob%zsol,1),size(ob%zsol,2)
+      allocate(solu0(1:ob%ker,iDeg+1:iDeg+nDeg))
       
-      iErr=GmfSetKwd(inriaSol,GmfKey,nCell,nFld,kind(1),ob%ord(iCell0),nNod)                          !> ob%ord(iCell0) car iso ordre
-      iErr=GmfSetBlock(                                          &
-      &    inriaSol                                             ,&
-      &    GmfKey                                               ,&
-      &    int(    1,kind=8)                                    ,&
-      &    int(nCell,kind=8)                                    ,&
-      &    0, %val(0), %val(0)                                  ,&
-      &    GmfDoubleVec,ob%ker*nNod, solu1(1,1), solu1(1,nCell)  )
+      do jDeg=iDeg+1,iDeg+nDeg
+        solu0(1:ob%ker,jDeg)=real(ob%zsol(1:ob%ker,jDeg),kind=8)
+      enddo
+      print '(6x,"nDeg       =",i10)',nDeg
+      print '(6x,"size(solu0)=",i10,"=",i10,"x",i10)',size(solu0),size(solu0,1),size(solu0,2)
+      end block
       
+    endif
+    
+    !> solu1(1:ob%ker*nNod,1:nCell)
+    call c_f_pointer(cptr=c_loc(solu0), fptr=solu1, shape=[ob%ker*nNod,nCell])
+    print '(6x,"size(solu1)=",i10,"=",i10,"x",i10)',size(solu1),size(solu1,1),size(solu1,2)
+    
+    iErr=GmfSetKwd(inriaSol,GmfKey,nCell,nFld,kind(1),ob%ord(iCell0),nNod)                        !> ob%ord(iCell0) car iso ordre
+    print '(6x,"nFld=",i10,2x,"kind=",*(i2,1x))',nFld,kind(1:nFld)
+    
+    iErr=GmfSetBlock(                                          &
+    &    inriaSol                                             ,&
+    &    GmfKey                                               ,&
+    &    int(    1,kind=8)                                    ,&
+    &    int(nCell,kind=8)                                    ,&
+    &    0, %val(0), %val(0)                                  ,&
+    &    GmfDoubleVec,ob%ker*nNod, solu1(1,1), solu1(1,nCell)  )
+    
+    if( ob%solutionIsReal )then
       solu0=>null()
       solu1=>null()
-      
     else
-      stop "stop @ writeSoluBlock solution is complex"
+      deallocate(solu0)
+      solu1=>null()
     endif
     !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
+    print '(3x,"writeSoluBlock end")'
     return
   end subroutine writeSoluBlock
   
 end subroutine writeInriaHOBinary
-
 
 
 subroutine display(ob)
@@ -1136,6 +1153,166 @@ end function equal
 
 
 end module mesProcedures
+
+subroutine computeOrder()
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  use mesParametres
+  use mesProcedures
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  implicit none
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  type :: clock
+    character(8)   :: date
+    character(10)  :: time
+    integer        :: year,mounth,day
+    integer        :: hour,minute,second
+    character(5)   :: zone
+  end type clock
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  type(mesDonnees)    :: ob
+  integer             :: i
+  integer             :: iCell
+  real(8)             :: nrjMin,nrjMax,nrjAve
+  real(8), pointer    :: nrj(:)
+  integer, pointer    :: order(:)
+  integer             :: iDeg
+  integer             :: verbose
+  character(80)       :: buffer
+  integer             :: iErr
+  integer             :: values(8)
+  type(clock)         :: clock0
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  call date_and_time(     &
+  &    date=clock0%date  ,&
+  &    time=clock0%time  ,&
+  &    zone=clock0%zone  ,&
+  &    values=values      )
+  
+  clock0%year  =values(1)
+  clock0%mounth=values(2)
+  clock0%day   =values(3)
+  clock0%hour  =values(5)
+  clock0%minute=values(6)
+  clock0%second=values(7)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  print '(/"usage: lectureRAW <file>")'
+  print '(4x,"file: solutions")'
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  if( command_argument_count()>=1 )then
+    call get_command_argument(number=1,value =ob%file)
+  else
+    write(*,'(/"file: ")',advance='no') ; read(*,'(a)')ob%file
+  endif
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  call readRAW(ob=ob)
+  call display(ob=ob)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !> Analyzing Values
+  select case(ob%geometry)
+  case(Geo3D)
+    select case(ob%equation)
+    case(EqnLEE)
+      
+      block
+      integer             :: jDeg,nDeg
+      real(8)             :: u1,v1,w1,x1,e1
+      real(8)   , pointer :: dSolu(:,:)
+      complex(8), pointer :: zSolu(:,:)
+      
+      allocate(nrj(1:ob%nCell))
+      
+      iDeg=1
+      do iCell=1,ob%nCell
+        nrj(iCell)=0d0
+        
+        select case( ob%cellType(iCell) )
+        case(hexahedron,hexahedron2)
+         nDeg=(ob%ord(iCell)+1)
+         nDeg=nDeg*nDeg*nDeg
+        case(tetra,tetra2)
+         nDeg=(ob%ord(iCell)+1)
+         nDeg=nDeg*(nDeg+1)*(nDeg+2)/6
+        case default
+          write(*,'(/"Kind of cell not implemented: ",i0)')ob%cellType(iCell)
+          stop
+        end select
+        
+        if( ob%solutionIsReal )then
+          dSolu=>ob%dsol(1:ob%ker,iDeg:iDeg+nDeg-1)
+          do jDeg=1,nDeg        
+            e1=e1+dot_product(dSolu(:,jDeg),dSolu(:,jDeg))
+          enddo
+        else
+          zSolu=>ob%zsol(1:ob%ker,iDeg:iDeg+nDeg-1)
+          do jDeg=1,nDeg
+            e1=e1+dot_product(zSolu(:,jDeg),zSolu(:,jDeg))
+          enddo
+        endif
+        nrj(iCell)=e1/real(nDeg,kind=8)
+        
+        iDeg=iDeg+nDeg
+      enddo
+      
+      nrjMin=minval(nrj)
+      nrjMax=maxval(nrj)
+      nrjAve=sum(nrj)/real(ob%nDeg,kind=8)
+      
+      end block
+      
+    case default
+      print '("Stop @ computeOrder Equation not Implemented")'
+    end select
+  case default
+    print '("Stop @ computeOrder Geometry not Implemented")'
+  end select
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  block
+  integer :: iUnit
+  integer :: iCell
+  open(newunit=iUnit,file="order.sol",action='write')
+  
+  write(iUnit,'("MeshVersionFormatted 2"/)')
+  select case(ob%geometry)
+  case(Geo2D) ; write(iUnit,'("Dimension 2"/)')
+  case(Geo3D) ; write(iUnit,'("Dimension 3"/)')
+  end select
+  
+  if( .not.ob%nT4==0 )then
+    write(iUnit,'("SolAtTetrahedra")')
+    write(iUnit,'(i0)')ob%nT4
+    write(iUnit,'("1 1"/)')
+    do iCell=1,ob%nT4
+      if( nrj(iCell)> nrjAve/2d0 )then
+        order(iCell)=1
+      else
+        order(iCell)=3
+      endif
+    enddo
+  endif
+  
+  close(iUnit)
+  end block
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
+  return
+end subroutine computeOrder
 
 
 subroutine compareRAW()
@@ -1445,7 +1622,7 @@ subroutine exportInriaHO()
   endif
   call readRaw           (ob=ob)
   call displaySol        (ob=ob)
-  call writeInriaHO      (ob=ob)
+ !call writeInriaHO      (ob=ob)
   call writeInriaHOBinary(ob=ob)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   return
@@ -1577,7 +1754,6 @@ subroutine replaceRAW()
         r=T**(  1d0/(gamma-1d0))
        !print '("T=",f12.5,1x,"r=",f12.5,1x,"p=",f12.5)',T,r,p
         
-        
         !> Physical Values of u,v,r,p
         r0 =ob2%dsol(1,iDeg)
         ru0=ob2%dsol(2,iDeg) ; u0=ru0/r0
@@ -1608,7 +1784,6 @@ subroutine replaceRAW()
         re=re-re0
         
         ob2%dsol(1:4,iDeg)=ob2%dsol(1:4,iDeg)+[r,ru,rv,re] ! print '("sol=",4(e22.15,1x))',sol(1:4,iVert)
-        
         
       enddo
     case default
