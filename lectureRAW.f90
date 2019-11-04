@@ -232,7 +232,7 @@ subroutine readRaw(ob)
   else
     ob%ker=3
   endif
-  print '("ker: ",i1)',ob%ker
+  print '("=> ker: ",i1)',ob%ker
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -297,7 +297,7 @@ subroutine readRaw(ob)
         case("TetrahedraP1NodesPositions"    ,"TetrahedraP2NodesPositions"    ,"TetrahedraP3NodesPositions"    )
           allocate(ob%T4uvw(1:strd,1:nNod))
           read(250)ob%T4uvw(1:strd,1:nNod)
-          uvw=>ob%Q4uvw
+          uvw=>ob%T4uvw
         case("QuadrilateralsQ1NodesPositions","QuadrilateralsQ2NodesPositions","QuadrilateralsQ3NodesPositions") ! ob%Q4uvw=>uvw 
           allocate(ob%Q4uvw(1:strd,1:nNod))
           read(250)ob%Q4uvw(1:strd,1:nNod)
@@ -323,6 +323,7 @@ subroutine readRaw(ob)
     
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   close(unit=250)
+  print '("Closing file: ",a)',trim(ob%file)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -758,7 +759,7 @@ subroutine writeInriaHOBinary(ob)
   
   !>>>
   TetrahedraNodesPositions: if( .not.ob%nT4==0 )then
-    print '(3x,"TetrahedraNodesPositions")'
+    print '(3x,"TetrahedraNodesPositions {1-u-v-w,u,v,w} (order="i0,")")',ob%ord(1)
     uvw=>ob%T4uvw
     nNod=size(uvw,2)
     
@@ -768,6 +769,7 @@ subroutine writeInriaHOBinary(ob)
       uvw(3,iNod)=uvw(2,iNod)
       uvw(2,iNod)=uvw(1,iNod)
       uvw(1,iNod)=x
+      print '(6x,4(e22.15,1x))',uvw(1:4,iNod)
     enddo
     
     select case(ob%meshOrder)
@@ -793,7 +795,7 @@ subroutine writeInriaHOBinary(ob)
   
   !>>>
   QuadrilateralsNodesPositions: if( .not.ob%nQ4==0 )then
-    print '(3x,"QuadrilateralsNodesPositions")'
+    print '(3x,"QuadrilateralsNodesPositions (order="i0,")")',ob%ord(1)
     uvw=>ob%Q4uvw
     uvw(:,:)=(uvw(:,:)+1d0)*5d-1                                                                    !> \in [0,1]^2 INRIA
     nNod=size(uvw,2)
@@ -815,7 +817,7 @@ subroutine writeInriaHOBinary(ob)
   
   !>>>
   TrianglesNodesPositions: if( .not.ob%nT3==0 )then
-    print '(3x,"TrianglesNodesPositions")'
+    print '(3x,"TrianglesNodesPositions (order="i0,")")',ob%ord(1)
     uvw=>ob%T3uvw
     nNod=size(uvw,2)
     
@@ -824,6 +826,7 @@ subroutine writeInriaHOBinary(ob)
       uvw(3,iNod)=uvw(2,iNod)
       uvw(2,iNod)=uvw(1,iNod)
       uvw(1,iNod)=x
+      print '(6x,3(e22.15,1x))',uvw(1:3,iNod)
     enddo
     
     select case(ob%meshOrder)

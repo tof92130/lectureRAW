@@ -10,3 +10,6 @@ ifort lectureRAW.f90 ${LIBMESH_DIR}/lib/libMeshbf.7.a -I${LIBMESH_DIR}/include -
 
 cp lectureRAW /Users/peyret/Applications/bin//lectureRaw
 
+
+rsync --delete -av ~/Developer/Space/lectureRAW peyret@spiro-daaa:~/Developer/lectureRAW/
+
