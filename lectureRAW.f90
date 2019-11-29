@@ -376,66 +376,116 @@ subroutine isoOrderRaw(ob,ord)
   use baseSimplex1D
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  type(mesDonnees)    :: ob
-  integer, intent(in) :: ord
-  !>
-  integer             :: ordMin,ordMax,iOrd
-  integer             :: iCell,nCell
-  integer             :: nNod,nMod,ad
-  logical, pointer    :: orderIsPresent(:)
-  real(8), pointer    :: uvw(:,:)
-  real(8), pointer    :: rst(:,:)
-  real(8), pointer    :: a(:),b(:),c(:)
-  real(8), pointer    :: vand(:,:)
-  real(8), pointer    :: ai  (:,:)
+  type lagrange
+    real(8), pointer :: ai(:,:)
+  end type lagrange
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  print '(/"Building isoOrder solution ord=",i0)',ord
-
+  type(mesDonnees)        :: ob
+  integer, intent(in)     :: ord
+  !>
+  integer                 :: ordMin,ordMax,iOrd
+  integer                 :: iCell,nCell
+  integer                 :: nNod,nMod,nDeg,ad  
+  logical, pointer        :: orderIsPresent(:)
+  real(8), pointer        :: uvw(:,:)
+  real(8), pointer        :: rst(:,:)
+  real(8), pointer        :: a(:),b(:),c(:)
+  real(8), pointer        :: vand(:,:)
+  real(8), pointer        :: ai  (:,:)
+  type(lagrange), pointer :: base(:)
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   ordMin=minval(ob%ord)
   ordMax=maxval(ob%ord)
-  print '("min/max(order)=",i0,"/",i0)',ordMin,ordMax
-  
-
-
-  allocate(orderIsPresent(ordMin:ordMax))
-  orderIsPresent(ordMin:ordMax)=.false.
-  nCell=ob%nT4
-  if( .not.nCell==0 )then
-    do iCell=1,nCell
-      orderIsPresent(ob%ord(iCell))=.true.
-    enddo
-  endif
-  
-  do iOrd=ordMin,ordMax
-    if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
-      print '(3x,"order=",i0," cpt=",i10)',iOrd,count(ob%ord==iOrd)
-      
-      call nodesT4   (ord=iOrd,uvw=uvw,display=.false.)
-      call nodesT4opt(ord=iOrd,uvw=uvw,display=.false. )
-
-      call nodesT4uvw2rst(uvw=uvw,rst=rst) !> rst(1:3,:)=2d0*uvw(1:3,:)-1d0
-     !write(*,'(/"Tetra (rst):")')
-     !print '("rst(1:3,",i2,")=",f12.5,2x,f12.5,2x,f12.5)',(ad,rst(1:3,ad),ad=1,size(rst,2))
-      
-      call nodesT4rst2abc(rst=rst,a=a,b=b,c=c)
-      write(*,'(/"Tetra (abc):")')
-      print '("abc(",i2,")=",f12.5,2x,f12.5,2x,f12.5)',(ad,a(ad),b(ad),c(ad),ad=1,size(a))
-      
-      call vandermondeT4(ord=ord,a=a,b=b,c=c,vand=vand)
-      nNod=size(uvw,2)
-      nMod=(ord+1)*(ord+2)*(ord+3)/6
-
-      allocate(ai(1:nMod,1:nNod))
-      call lagrangeT4(ord=ord,vand=vand,a=a,b=b,c=c,lx=ai,transpose=.false.)
-      deallocate(uvw)
-      deallocate(rst)
-      deallocate(a,b,c)
-      deallocate(vand)
-      deallocate(ai)
-    endif
-  enddo
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  NotIsoOrder: if( .not.(ordMin==ordMin .and. ord==ordMin) )then
+    print '(/"Building isoOrder solution ord=",i0)',ord
+    print '("min/max(order)=",i0,"/",i0)',ordMin,ordMax
+    
+    allocate(orderIsPresent(ordMin:ordMax))
+    allocate(base          (ordMin:ordMax))
+    
+    orderIsPresent(ordMin:ordMax)=.false.
+    
+    nDeg=ob%nT4*(ord+1)*(ord+2)*(ord+3)/6
+    
+    print '("nDeg=",i0," -> ",i0)',ob%nDeg,nDeg
+    
+    nCell=ob%nT4
+    if( .not.nCell==0 )then
+      
+      nMod=(ord+1)*(ord+2)*(ord+3)/6
+      
+      do iCell=1,nCell
+        orderIsPresent(ob%ord(iCell))=.true.
+      enddo
+      
+      do iOrd=ordMin,ordMax
+        if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
+          print '(3x,"order=",i0," cpt=",i10)',iOrd,count(ob%ord==iOrd)
+          
+          call nodesT4   (ord=iOrd,uvw=uvw,display=.false.)
+          call nodesT4opt(ord=iOrd,uvw=uvw,display=.false. )
+          call nodesT4uvw2rst(uvw=uvw,rst=rst) !> rst(1:3,:)=2d0*uvw(1:3,:)-1d0
+          !write(*,'(/"Tetra (rst):")')
+          !print '("rst(1:3,",i2,")=",f12.5,2x,f12.5,2x,f12.5)',(ad,rst(1:3,ad),ad=1,size(rst,2))
+          
+          call nodesT4rst2abc(rst=rst,a=a,b=b,c=c)
+          !write(*,'(/"Tetra (abc):")')
+          !print '("abc(",i2,")=",f12.5,2x,f12.5,2x,f12.5)',(ad,a(ad),b(ad),c(ad),ad=1,size(a))
+          
+          call vandermondeT4(ord=ord,a=a,b=b,c=c,vand=vand)
+          
+          nNod=size(uvw,2)
+          
+          allocate(base(iOrd)%ai(1:nMod,1:nNod))
+          call lagrangeT4(ord=ord,vand=vand,a=a,b=b,c=c,lx=base(iOrd)%ai,transpose=.false.)
+          write(*,'(3x,"Tetra ai: ",i0,"x",i0)')nMod,nNod
+         !print '("ai(",i2,")=",*(f12.5,2x))',(ad,base(iOrd)%ai(:,ad),ad=1,nNod)
+          
+          deallocate(uvw)
+          deallocate(rst)
+          deallocate(a,b,c)
+          deallocate(vand)
+        endif
+      enddo
+      
+      !> sol(1:ker,1:nMod)=sol(1:ker,1:nNod) x ai(1:nNod,1:nMod)
+
+      print '("coucou0")'
+      do iCell=1,nCell
+        if( .not.ob%ord(iCell)==ord )then
+          nNod=(ob%ord(iCell)+1)*(ob%ord(iCell)+2)*(ob%ord(iCell)+3)/6
+        endif
+      enddo
+      
+      print '("coucou1")'
+      do iCell=1,nCell
+        if( .not.ob%ord(iCell)==ord )then
+          nNod=(ob%ord(iCell)+1)*(ob%ord(iCell)+2)*(ob%ord(iCell)+3)/6
+          ai=>base(ob%ord(iCell))%ai
+        endif
+      enddo
+      
+      !> Nettoyage de la mémoire
+      print '("coucou2")'
+      do iOrd=ordMin,ordMax
+        if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
+          deallocate(base(iOrd)%ai)
+        endif
+      enddo
+      
+    endif
+    print '("coucou3")'
+    deallocate(orderIsPresent)
+    deallocate(base          )
+
+  endif NotIsoOrder
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
   return
 end subroutine isoOrderRaw
 
