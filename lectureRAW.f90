@@ -456,9 +456,6 @@ subroutine isoOrderRaw(ob,ord)
           call nodesT4   (ord=iOrd,uvw=uvw,display=.false.)
           call nodesT4opt(ord=iOrd,uvw=uvw,display=.false. )
           call nodesT4uvw2rst(uvw=uvw,rst=rst) !> rst(1:3,:)=2d0*uvw(1:3,:)-1d0
-          !write(*,'(/"Tetra (rst):")')
-          !print '("rst(1:3,",i2,")=",f12.5,2x,f12.5,2x,f12.5)',(ad,rst(1:3,ad),ad=1,size(rst,2))
-          
           call nodesT4rst2abc(rst=rst,a=a,b=b,c=c)
           !write(*,'(/"Tetra (abc):")')
           !print '("abc(",i2,")=",f12.5,2x,f12.5,2x,f12.5)',(ad,a(ad),b(ad),c(ad),ad=1,size(a))
