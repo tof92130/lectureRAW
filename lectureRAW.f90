@@ -398,30 +398,31 @@ subroutine isoOrderRaw(ob,ord)
   type(lagrange), pointer :: base(:)
   real(8)   , pointer     :: dsol0(:,:),dsol1(:,:),dSol(:,:)
   complex(8), pointer     :: zsol0(:,:),zsol1(:,:),zSol(:,:)
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   ordMin=min(minval(ob%ord),ord)
   ordMax=max(maxval(ob%ord),ord)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
+  
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-!  NotIsoOrder: if( .not.(ordMin==ordMin .and. ord==ordMin) )then
-NotIsoOrder: if( 0==0 )then
+  NotIsoOrder: if( .not.(ordMin==ordMin .and. ord==ordMin) )then
     print '(/">>> Building isoOrder solution ord=",i0)',ord
     !print '(4x,"min/max(order)=",i0,"/",i0)',ordMin,ordMax
     
     !>>> Initialisation
+    iCell0=0
     iDeg0=0
     iDeg1=0
-    nDeg =0
+    !<<<
+
+    !>>> Allocation
+    nDeg=0
     if( .not.ob%nH6==0 )nDeg=nDeg+ob%nH6*(ord+1)*(ord+1)*(ord+1)
     if( .not.ob%nT4==0 )nDeg=nDeg+ob%nT4*(ord+1)*(ord+2)*(ord+3)/6
     if( .not.ob%nQ4==0 )nDeg=nDeg+ob%nQ4*(ord+1)*(ord+1)
     if( .not.ob%nT3==0 )nDeg=nDeg+ob%nT3*(ord+1)*(ord+2)/2
     print '(4x,"Intial/Final nDeg=",i0," -> ",i0)',ob%nDeg,nDeg
-    !<<<
-
-    !>>> Allocation
+    
     if( ob%solutionIsReal )then
       allocate(dSol(1:ob%ker,1:nDeg))
       dSol(1:ob%ker,1:nDeg)=0d0
@@ -435,7 +436,6 @@ NotIsoOrder: if( 0==0 )then
     orderIsPresent(ordMin:ordMax)=.false.
     !<<<
 
-    iCell0=0
     !>>> Hexa
     !<<<
 
@@ -462,17 +462,17 @@ NotIsoOrder: if( 0==0 )then
       enddo
       
       do iOrd=ordMin,ordMax
-        if( orderIsPresent(iOrd) )then ! .and. .not.iOrd==ord )then
+        if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
           print '(4x,"Passing from order=",i0," to order ",i0,t50,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
           
           call nodesT4   (ord=iOrd,uvw=uvw0,display=.false.)
           call nodesT4opt(ord=iOrd,uvw=uvw0,display=.false.)
           call nodesT4uvw2abc(uvw=uvw0,a=a0,b=b0,c=c0,display=.false.)
-          call vandermondeT4(ord=ord,a=a0,b=b0,c=c0,vand=vand)
+          call vandermondeT4(ord=iOrd,a=a0,b=b0,c=c0,vand=vand)
           nDeg0=size(a0) !> = nMod
           deallocate(uvw0,a0,b0,c0)
           
-          allocate(base(iOrd)%ai(1:nDeg0,1:nDeg1)) ; print '(4x,"size(ai) order=",i0,": nMod x nNod= ",i0,"x",i0)',iOrd,nDeg0,nDeg1
+          allocate(base(iOrd)%ai(1:nDeg0,1:nDeg1)) ! print '(4x,"size(ai) order=",i0,": nMod x nNod= ",i0,"x",i0)',iOrd,nDeg0,nDeg1
           ai=>base(iOrd)%ai(1:nDeg0,1:nDeg1)
           call lagrangeT4(ord=iOrd,vand=vand,a=a,b=b,c=c,lx=ai,transpose=.true.) ! (nMod x nNod) => transpose=.true.
           !do ad=1,nDeg1 ; print '(6x,"ai(",i2,")=",*(f12.5,2x))',ad,ai(:,ad) ;enddo
@@ -541,7 +541,7 @@ NotIsoOrder: if( 0==0 )then
     !>>> Affectation
     if( .not.iDeg0==ob%nDeg )stop '("Probleme isoOrderRaw iDeg0!=ob%nDeg")'
     if( .not.iDeg1==   nDeg )stop '("Probleme isoOrderRaw iDeg1!=   nDeg")'
-      
+    
     print '(4x,"iDeg0=",i0,"/",i0)',iDeg0,ob%nDeg
     print '(4x,"iDeg1=",i0,"/",i0)',iDeg1,   nDeg
     
@@ -1846,8 +1846,8 @@ subroutine exportInriaHO()
   endif
   call readRaw           (ob=ob)
   call displaySol        (ob=ob)
-! call isoOrderRaw       (ob=ob,ord=maxval(ob%ord))
-  call isoOrderRaw       (ob=ob,ord=3)
+  call isoOrderRaw       (ob=ob,ord=maxval(ob%ord))
+ !call isoOrderRaw       (ob=ob,ord=3)
   call displaySol        (ob=ob)
  !call writeInriaHO      (ob=ob)
   call writeInriaHOBinary(ob=ob)
