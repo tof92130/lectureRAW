@@ -431,9 +431,8 @@ subroutine isoOrderRaw(ob,ord)
       zSol(1:ob%ker,1:nDeg)=(0d0,0d0)
     endif
     
-    allocate(orderIsPresent(ordMin:ordMax))
+    allocate(orderIsPresent(ordMin:ordMax)) ; orderIsPresent(ordMin:ordMax)=.false.
     allocate(base          (ordMin:ordMax))    
-    orderIsPresent(ordMin:ordMax)=.false.
     !<<<
 
     !>>> Hexa
@@ -483,7 +482,7 @@ subroutine isoOrderRaw(ob,ord)
       
       !> sol(1:ker,1:nDeg1)=sol(1:ker,1:nDeg0) x ai(1:nDeg0,1:nDeg1)
       do iCell=iCell0+1,iCell0+nCell ! print '("iCell=",i10,"/",i10,2x,"ord:",i0," -> ",i0)',iCell,nCell,ob%ord(iCell),ord
-        if( 0==1 ) then !( ob%ord(iCell)==ord )then
+        if( ob%ord(iCell)==ord )then
           nDeg0=nDeg1
           if( ob%solutionIsReal )then
             dSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)=ob%dSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
@@ -536,6 +535,84 @@ subroutine isoOrderRaw(ob,ord)
     !<<< Quads
     
     !>>> Triangles
+    nCell=ob%nT3
+    if( .not.nCell==0 )then
+      
+      !> Points d'interpollation a ord
+      deallocate(ob%T4uvw)
+      call nodesT3   (ord=ord,uvw=ob%T3uvw,display=.false.)
+      call nodesT3opt(ord=ord,uvw=ob%T3uvw,display=.false.)
+      call nodesT3uv2ab(uv=ob%T3uvw,a=a,b=b,display=.false.)
+      nDeg1=size(a) !> = nNod
+      
+      orderIsPresent(ordMin:ordMax)=.false.
+      do iCell=iCell0+1,iCell0+nCell
+        orderIsPresent(ob%ord(iCell))=.true.
+      enddo
+      
+      do iOrd=ordMin,ordMax
+        if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
+          print '(4x,"Passing from order=",i0," to order ",i0,t50,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
+          
+          call nodesT3   (ord=iOrd,uvw=uvw0,display=.false.)
+          call nodesT3Opt(ord=iOrd,uvw=uvw0,display=.false.)
+          call nodesT3uv2ab(uv=uvw0,a=a0,b=b0,display=.false.)
+          call vandermondeT3(ord=iOrd,a=a0,b=b0,vand=vand)
+          nDeg0=size(a0) !> = nMod
+          deallocate(uvw0,a0,b0)
+          
+          allocate(base(iOrd)%ai(1:nDeg0,1:nDeg1)) ! print '(4x,"size(ai) order=",i0,": nMod x nNod= ",i0,"x",i0)',iOrd,nDeg0,nDeg1
+          ai=>base(iOrd)%ai(1:nDeg0,1:nDeg1)
+          call lagrangeT3(ord=iOrd,vand=vand,a=a,b=b,lx=ai,transpose=.true.) ! (nMod x nNod) => transpose=.true.
+          !do ad=1,nDeg1 ; print '(6x,"ai(",i2,")=",*(f12.5,2x))',ad,ai(:,ad) ;enddo
+          deallocate(vand)
+        endif
+      enddo
+      deallocate(a,b)
+      
+      !> sol(1:ker,1:nDeg1)=sol(1:ker,1:nDeg0) x ai(1:nDeg0,1:nDeg1)
+      do iCell=iCell0+1,iCell0+nCell ! print '("iCell=",i10,"/",i10,2x,"ord:",i0," -> ",i0)',iCell,nCell,ob%ord(iCell),ord
+        if( ob%ord(iCell)==ord )then
+          nDeg0=nDeg1
+          if( ob%solutionIsReal )then
+            dSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)=ob%dSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
+          else
+            zSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)=ob%zSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
+          endif
+        else
+          ai=>base(ob%ord(iCell))%ai(:,:)
+          nDeg0=size(ai,1)
+          if( ob%solutionIsReal )then
+            dSol0=>ob%dSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)
+            dSol1=>   dSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
+            dSol1(1:ob%ker,1:nDeg1)=matmul(dSol0(1:ob%ker,1:nDeg0),ai(1:nDeg0,1:nDeg1))
+          else
+            zSol0=>ob%zSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)
+            zSol1=>   zSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
+            zSol1(1:ob%ker,1:nDeg1)=matmul(zSol0(1:ob%ker,1:nDeg0),ai(1:nDeg0,1:nDeg1))
+          endif
+          !print '("iCell=",i10," ob%ord=",i10," -> ",i10)',iCell,ob%ord(iCell),ord
+          ob%ord(iCell)=ord
+        endif
+        
+        iDeg0=iDeg0+nDeg0
+        iDeg1=iDeg1+nDeg1
+      enddo
+
+      do iCell=iCell0+2,iCell0+nCell ! print '("iCell=",i10,"/",i10,2x,"ord:",i0," -> ",i0)',iCell,nCell,ob%ord(iCell),ord
+       !print '("iCell=",i10," ob%deg=",i10," -> ",i10)',iCell,ob%deg(iCell),ob%deg(iCell-1)+nDeg1
+        ob%deg(iCell)=ob%deg(iCell-1)+nDeg1
+      enddo
+      
+      !> Nettoyage de la mémoire
+      do iOrd=ordMin,ordMax
+        if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
+          deallocate(base(iOrd)%ai)
+        endif
+      enddo
+      
+      iCell0=iCell0+nCell
+    endif
     !<<< Triangles
     
     !>>> Affectation
