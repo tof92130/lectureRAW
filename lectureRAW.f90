@@ -532,6 +532,10 @@ subroutine isoOrderRaw(ob,ord)
     !<<< Tetra
 
     !>>> Quads
+    nCell=ob%nQ4
+    if( .not.nCell==0 )then
+
+    endif
     !<<< Quads
     
     !>>> Triangles
@@ -539,7 +543,7 @@ subroutine isoOrderRaw(ob,ord)
     if( .not.nCell==0 )then
       
       !> Points d'interpollation a ord
-      deallocate(ob%T4uvw)
+      deallocate(ob%T3uvw)
       call nodesT3   (ord=ord,uvw=ob%T3uvw,display=.false.)
       call nodesT3opt(ord=ord,uvw=ob%T3uvw,display=.false.)
       call nodesT3uv2ab(uv=ob%T3uvw,a=a,b=b,display=.false.)
