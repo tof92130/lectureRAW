@@ -414,7 +414,7 @@ subroutine isoOrderRaw(ob,ord)
     iDeg0=0
     iDeg1=0
     !<<<
-
+    
     !>>> Allocation
     nDeg=0
     if( .not.ob%nH6==0 )nDeg=nDeg+ob%nH6*(ord+1)*(ord+1)*(ord+1)
@@ -485,9 +485,9 @@ subroutine isoOrderRaw(ob,ord)
         if( ob%ord(iCell)==ord )then
           nDeg0=nDeg1
           if( ob%solutionIsReal )then
-            dSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)=ob%dSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
+            dSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)=ob%dSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)
           else
-            zSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)=ob%zSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
+            zSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)=ob%zSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)
           endif
         else
           ai=>base(ob%ord(iCell))%ai(:,:)
@@ -500,12 +500,6 @@ subroutine isoOrderRaw(ob,ord)
             zSol0=>ob%zSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)
             zSol1=>   zSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
             zSol1(1:ob%ker,1:nDeg1)=matmul(zSol0(1:ob%ker,1:nDeg0),ai(1:nDeg0,1:nDeg1))
-            !block
-            !integer :: i,j
-            !do j=1,nDeg0 ; do i=1,nDeg1
-            !  zSol1(1:ob%ker,i)=zSol1(1:ob%ker,i)+zSol0(1:ob%ker,j)*dcmplx(ai(j,i),0d0)
-            !enddo ; enddo
-            !end block
           endif
           !print '("iCell=",i10," ob%ord=",i10," -> ",i10)',iCell,ob%ord(iCell),ord
           ob%ord(iCell)=ord
@@ -579,9 +573,9 @@ subroutine isoOrderRaw(ob,ord)
         if( ob%ord(iCell)==ord )then
           nDeg0=nDeg1
           if( ob%solutionIsReal )then
-            dSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)=ob%dSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
+            dSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)=ob%dSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)
           else
-            zSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)=ob%zSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)
+            zSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1)=ob%zSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0)
           endif
         else
           ai=>base(ob%ord(iCell))%ai(:,:)
@@ -1928,7 +1922,7 @@ subroutine exportInriaHO()
   call readRaw           (ob=ob)
   call displaySol        (ob=ob)
   call isoOrderRaw       (ob=ob,ord=maxval(ob%ord))
- !call isoOrderRaw       (ob=ob,ord=3)
+ !call isoOrderRaw       (ob=ob,ord=4)
   call displaySol        (ob=ob)
  !call writeInriaHO      (ob=ob)
   call writeInriaHOBinary(ob=ob)
