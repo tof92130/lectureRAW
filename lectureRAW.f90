@@ -50,11 +50,7 @@ module mesParametres
 end module mesParametres
 
 
-
-
-
 module myData
-  use mesParametres
   implicit none
   type :: monType
     character(256)        :: file
@@ -129,6 +125,7 @@ module myData
 end module myData
 
 submodule(myData) myProcedures
+use mesParametres
 contains
 module procedure delete
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -186,7 +183,7 @@ module procedure equal
   
   return
 end procedure equal
-  
+
 module procedure readRaw
     !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     integer          :: iVar,iDeg,iCell
@@ -2864,7 +2861,7 @@ end module mesProcedures
 subroutine computeOrder()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   use mesParametres
-  use mesProcedures
+  use myData
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   implicit none
@@ -2880,7 +2877,7 @@ subroutine computeOrder()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  type(mesDonnees)    :: ob
+  type(monType)       :: ob
   integer             :: i
   integer             :: iCell
   real(8)             :: nrjMin,nrjMax,nrjAve
@@ -3025,7 +3022,7 @@ end subroutine computeOrder
 subroutine compareRAW()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   use mesParametres
-  use mesProcedures
+  use myData
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   implicit none
@@ -3041,9 +3038,9 @@ subroutine compareRAW()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  type(mesDonnees)    :: ob
-  type(mesDonnees)    :: ob1
-  type(mesDonnees)    :: ob2
+  type(monType)       :: ob
+  type(monType)       :: ob1
+  type(monType)       :: ob2
   integer             :: iCell,iCellMax
   integer             :: iVar
   integer             :: iDeg,iDegMax
@@ -3311,11 +3308,11 @@ end subroutine compareRAW
 
 subroutine exportInriaHO()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  use mesProcedures
+  use myData
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   implicit none
-  type(mesDonnees) :: ob
+  type(monType) :: ob
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   print '(/"usage: lecture <file.dat>")'
@@ -3342,7 +3339,7 @@ end subroutine exportInriaHO
 subroutine replaceRAW()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   use mesParametres
-  use mesProcedures
+  use myData
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   implicit none
@@ -3358,7 +3355,7 @@ subroutine replaceRAW()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  type(mesDonnees)    :: ob1,ob2
+  type(monType)       :: ob1,ob2
   integer             :: i
   integer             :: iCell,iCellMax
   integer             :: iVar
@@ -3532,7 +3529,7 @@ end subroutine replaceRAW
 subroutine readPosition()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   use mesParametres
-  use mesProcedures
+  use myData
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   implicit none
@@ -3548,7 +3545,7 @@ subroutine readPosition()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  type(mesDonnees)    :: ob
+  type(monType)       :: ob
   integer             :: iCell,iCellMax
   integer             :: iVar
   integer             :: iDeg,iDegMax
@@ -3612,7 +3609,6 @@ end subroutine readPosition
 
 
 program main
-  use mesProcedures
   
   !call compareRAW()
   !call readPosition()
