@@ -1,4 +1,5 @@
 *.mod
+*.smod
 *.dat
 *.sol
 *.solb
