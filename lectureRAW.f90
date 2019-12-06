@@ -1232,7 +1232,7 @@ subroutine writeInriaHOBinary(ob)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  print '(/"End Writing Inria HO solution: ",a)',trim(file)
+  print '("<<< Writing Inria HO solution: ",a)',trim(file)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   return
@@ -1921,7 +1921,7 @@ subroutine exportInriaHO()
   endif
   call readRaw           (ob=ob)
   call displaySol        (ob=ob)
-  call isoOrderRaw       (ob=ob,ord=maxval(ob%ord))
+  call isoOrderRaw       (ob=ob,ord=max(maxval(ob%ord),1))
  !call isoOrderRaw       (ob=ob,ord=4)
   call displaySol        (ob=ob)
  !call writeInriaHO      (ob=ob)
