@@ -51,8 +51,9 @@ end module mesParametres
 
 
 module myData
-  implicit none
-  type :: monType
+  implicit none ! private
+  type, public :: monType
+    !private
     character(256)        :: file
     integer               :: geometry
     integer               :: equation
@@ -86,37 +87,43 @@ module myData
     real(8) , pointer     :: T4uvw(:,:)
     real(8) , pointer     :: Q4uvw(:,:)
     real(8) , pointer     :: T3uvw(:,:)
-  end type monType
+    contains
+    procedure, pass :: delete   => delete
+    procedure, pass :: displaySol => displaySol
+    procedure, pass :: isoOrder => isoOrderRaw
+    procedure, pass :: readRaw => readRaw
+    procedure, pass :: writeInriaHOBinary => writeInriaHOBinary
+    end type monType
   interface
     module subroutine delete(ob)
-      type(monType) :: ob
+      class(monType) :: ob
     end subroutine delete
     module function equal(ob1,ob2)
-        type(monType), intent(in) :: ob1
-        type(monType), intent(in) :: ob2
-        logical                   :: equal
+      class(monType), intent(in) :: ob1
+      class(monType), intent(in) :: ob2
+      logical                   :: equal
     end function equal
     module subroutine readRaw(ob)
-      type(monType) :: ob
+      class(monType) :: ob
     end subroutine readRaw
     module subroutine isoOrderRaw(ob,ord)
-      type(monType)        :: ob
+      class(monType)       :: ob
       integer, intent(in)  :: ord
     end subroutine isoOrderRaw
     module subroutine writeRaw(ob)
-      type(monType) :: ob
+      class(monType) :: ob
     end subroutine writeRaw
     module subroutine writeInriaHO(ob)
-      type(monType) :: ob
+      class(monType) :: ob
     end subroutine writeInriaHO
     module subroutine writeInriaHOBinary(ob)
-      type(monType) :: ob
+      class(monType) :: ob
     end subroutine writeInriaHOBinary
     module subroutine display(ob)
-      type(monType), intent(in) :: ob
+      class(monType), intent(in) :: ob
     end subroutine display
     module subroutine displaySol(ob)
-      type(monType), intent(in) :: ob
+      class(monType), intent(in) :: ob
     end subroutine displaySol
   end interface
   
@@ -124,9 +131,9 @@ module myData
     module procedure equal
   end interface
   
-interface afficheSol
-  procedure :: displaySol
-end interface
+  interface afficheSol
+    procedure :: displaySol
+  end interface
 
 end module myData
 
@@ -1925,14 +1932,15 @@ subroutine exportInriaHO()
   else
     write(*,'(/"file: ")',advance='no') ; read(*,'(a)')ob%file
   endif
-  call readRaw           (ob=ob)
-  call displaySol        (ob=ob)
-  call isoOrderRaw       (ob=ob,ord=max(maxval(ob%ord),1))
+  call ob%readRaw        ()
+  call ob%displaySol     ()
+  call ob%isoOrder       (ord=max(maxval(ob%ord),1))
+ !call isoOrderRaw       (ob=ob,ord=max(maxval(ob%ord),1))
  !call isoOrderRaw       (ob=ob,ord=4)
  !call displaySol        (ob=ob)
   call afficheSol        (ob=ob)
  !call writeInriaHO      (ob=ob)
-  call writeInriaHOBinary(ob=ob)
+  call ob%writeInriaHOBinary()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   return
 end subroutine exportInriaHO
