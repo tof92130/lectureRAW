@@ -145,17 +145,19 @@ use mesParametres
 contains
 module procedure delete
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  if( associated(ob%dsol) )deallocate(ob%dsol)
-  if( associated(ob%zsol) )deallocate(ob%zsol)
-  if( associated(ob%deg ) )deallocate(ob%deg)
-  if( associated(ob%ord ) )deallocate(ob%ord)
+  print '(/">>> Delete object")'
+  if( associated(ob%deg )     )deallocate(ob%deg)
+  if( associated(ob%ord )     )deallocate(ob%ord)
   if( associated(ob%cellType) )deallocate(ob%cellType)
-  if( associated(ob%H6uvw) )deallocate(ob%H6uvw)
-  if( associated(ob%W5uvw) )deallocate(ob%W5uvw)
-  if( associated(ob%P5uvw) )deallocate(ob%P5uvw)
-  if( associated(ob%T4uvw) )deallocate(ob%T4uvw)
-  if( associated(ob%Q4uvw) )deallocate(ob%Q4uvw)
-  if( associated(ob%T3uvw) )deallocate(ob%T3uvw)
+  if( associated(ob%H6uvw)    )deallocate(ob%H6uvw)
+  if( associated(ob%W5uvw)    )deallocate(ob%W5uvw)
+  if( associated(ob%P5uvw)    )deallocate(ob%P5uvw)
+  if( associated(ob%T4uvw)    )deallocate(ob%T4uvw)
+  if( associated(ob%Q4uvw)    )deallocate(ob%Q4uvw)
+  if( associated(ob%T3uvw)    )deallocate(ob%T3uvw)
+  if( associated(ob%dsol)     )deallocate(ob%dsol)
+  if( associated(ob%zsol)     )deallocate(ob%zsol)
+  print '("<<< Delete object")'
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   return
 end procedure delete
