@@ -87,13 +87,16 @@ module myData
     real(8) , pointer     :: T4uvw(:,:)
     real(8) , pointer     :: Q4uvw(:,:)
     real(8) , pointer     :: T3uvw(:,:)
-    contains
-    procedure, pass :: delete   => delete
+  contains
+    procedure, pass :: delete => delete
+    procedure, pass :: display => display
     procedure, pass :: displaySol => displaySol
     procedure, pass :: isoOrder => isoOrderRaw
     procedure, pass :: readRaw => readRaw
-    procedure, pass :: writeInriaHOBinary => writeInriaHOBinary
-    end type monType
+    procedure, pass :: writeInria => writeInriaHOBinary
+    !generic :: write(unformatted) => writeRAW
+  end type monType
+
   interface
     module subroutine delete(ob)
       class(monType) :: ob
@@ -1466,6 +1469,7 @@ end procedure displaySol
 end submodule myProcedures
 
 
+
 subroutine computeOrder()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   use mesParametres
@@ -1528,8 +1532,8 @@ subroutine computeOrder()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  call readRAW(ob=ob)
-  call display(ob=ob)
+  call ob%readRAW
+  call ob%display
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1660,6 +1664,7 @@ subroutine compareRAW()
   integer             :: iErr
   integer             :: values(8)
   type(clock)         :: clock0
+  logical             :: test
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1698,20 +1703,22 @@ subroutine compareRAW()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  call readRAW(ob=ob1)
-  call readRAW(ob=ob2)
+  call ob1%readRAW
+  call ob2%readRAW
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  if( .not.ob1==ob2 )then
-    call display(ob=ob1)
-    call display(ob=ob2)
+  test = ob1==ob2
+
+  if( .not.test )then
+    call ob1%display
+    call ob2%display
   endif
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   print '(/"Starting Analysis")'
-  if( ob1==ob2 )then
+  if( test )then
     
     !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     print '(4x,"Files are compatible")'
@@ -1844,7 +1851,7 @@ subroutine compareRAW()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  if( verbose>0 .and. ob1==ob2 .and. .not.cpt==0 .and. dMax>eps )then
+  if( verbose>0 .and. test .and. .not.cpt==0 .and. dMax>eps )then
     
     print '(/"Writing file: spaceDelta.dat")'
     ob%file="./spaceDelta.dat"
@@ -1906,9 +1913,9 @@ subroutine compareRAW()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  call delete(ob=ob )
-  call delete(ob=ob1)
-  call delete(ob=ob2)
+  call ob%delete
+  call ob1%delete
+  call ob2%delete
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   return
@@ -1932,15 +1939,17 @@ subroutine exportInriaHO()
   else
     write(*,'(/"file: ")',advance='no') ; read(*,'(a)')ob%file
   endif
-  call ob%readRaw        ()
-  call ob%displaySol     ()
+  call ob%readRaw
+  call ob%displaySol
   call ob%isoOrder       (ord=max(maxval(ob%ord),1))
  !call isoOrderRaw       (ob=ob,ord=max(maxval(ob%ord),1))
  !call isoOrderRaw       (ob=ob,ord=4)
  !call displaySol        (ob=ob)
-  call afficheSol        (ob=ob)
+ !call afficheSol        (ob=ob)
+  call ob%displaySol
  !call writeInriaHO      (ob=ob)
-  call ob%writeInriaHOBinary()
+  call ob%writeInria
+  call ob%delete
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   return
 end subroutine exportInriaHO
