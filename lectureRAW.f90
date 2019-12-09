@@ -124,6 +124,10 @@ module myData
     module procedure equal
   end interface
   
+interface afficheSol
+  procedure :: displaySol
+end interface
+
 end module myData
 
 submodule(myData) myProcedures
@@ -1925,7 +1929,8 @@ subroutine exportInriaHO()
   call displaySol        (ob=ob)
   call isoOrderRaw       (ob=ob,ord=max(maxval(ob%ord),1))
  !call isoOrderRaw       (ob=ob,ord=4)
-  call displaySol        (ob=ob)
+ !call displaySol        (ob=ob)
+  call afficheSol        (ob=ob)
  !call writeInriaHO      (ob=ob)
   call writeInriaHOBinary(ob=ob)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
