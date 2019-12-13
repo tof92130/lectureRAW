@@ -1,5 +1,5 @@
 module mesParametres
-
+  
   integer, parameter    :: Geo2D  = 2
   integer, parameter    :: GeoAx  = 4
   integer, parameter    :: GeoAxi = 4
@@ -215,10 +215,16 @@ module procedure readRaw
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+!  open(unit=250            ,&
+!  &    file=trim(ob%file)  ,&
+!  &    form='unformatted'  ,&
+!  &    recordtype='stream' ,&
+!  &    action='read'       ,&
+!  &    status='old'         )
   open(unit=250            ,&
   &    file=trim(ob%file)  ,&
   &    form='unformatted'  ,&
-  &    recordtype='stream' ,&
+  &    access='stream'     ,&
   &    action='read'       ,&
   &    status='old'         )
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -310,7 +316,7 @@ module procedure readRaw
       elseif( trim(buffer)=="LEE" .and. ob%geometry==Geo3D )then ; ob%ker=4
       elseif( trim(buffer)=="EUL" .and. ob%geometry==Geo2D )then ; ob%ker=4
       elseif( trim(buffer)=="EUL" .and. ob%geometry==Geo3D )then ; ob%ker=5
-      else ; stop"Bad configuration"
+      else ; stop "Bad configuration"
       endif
     endif
   else
@@ -737,9 +743,15 @@ module procedure  writeRaw
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !open(unit=250            ,&
+  !&    file=trim(ob%file)  ,&
+  !&    recordtype='stream' ,&
+  !&    form='unformatted'  ,&
+  !&    action='write'      ,&
+  !&    status='unknown'     )
   open(unit=250            ,&
   &    file=trim(ob%file)  ,&
-  &    recordtype='stream' ,&
+  &    access='stream'     ,&
   &    form='unformatted'  ,&
   &    action='write'      ,&
   &    status='unknown'     )
@@ -1857,10 +1869,16 @@ subroutine compareRAW()
     
     print '(/"Writing file: spaceDelta.dat")'
     ob%file="./spaceDelta.dat"
+    !open(unit=250            ,&
+    !&    file=trim(ob%file)  ,&
+    !&    form='unformatted'  ,&
+    !&    recordtype='stream' ,&
+    !&    action='write'      ,&
+    !&    status='unknown'     )
     open(unit=250            ,&
     &    file=trim(ob%file)  ,&
     &    form='unformatted'  ,&
-    &    recordtype='stream' ,&
+    &    access='stream'     ,&
     &    action='write'      ,&
     &    status='unknown'     )
     
