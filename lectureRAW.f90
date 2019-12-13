@@ -88,11 +88,11 @@ module myData
     real(8) , pointer     :: Q4uvw(:,:)
     real(8) , pointer     :: T3uvw(:,:)
   contains
-    procedure, pass :: delete => delete
-    procedure, pass :: display => display
+    procedure, pass :: delete     => delete
+    procedure, pass :: display    => display
     procedure, pass :: displaySol => displaySol
-    procedure, pass :: isoOrder => isoOrderRaw
-    procedure, pass :: readRaw => readRaw
+    procedure, pass :: isoOrder   => isoOrderRaw
+    procedure, pass :: readRaw    => readRaw
     procedure, pass :: writeInria => writeInriaHOBinary
     !generic :: write(unformatted) => writeRAW
   end type monType
@@ -205,7 +205,7 @@ end procedure equal
 module procedure readRaw
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   integer          :: iVar,iDeg,iCell
-  integer          :: iOrd,iNod,nNod,Strd
+  integer          :: iOrd,nNod,Strd
   real(8),pointer  :: uvw(:,:)
   character(80)    :: buffer  
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -473,7 +473,6 @@ module procedure isoOrderRaw
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   integer                 :: ordMin,ordMax,iOrd
   integer                 :: iCell0,iCell,nCell
-  integer                 :: ad
   integer                 :: nDeg
   integer                 :: iDeg0,nDeg0
   integer                 :: iDeg1,nDeg1
@@ -843,7 +842,7 @@ module procedure writeInriaHO
   integer          :: inriaSol
   integer          :: iCell,nCell,iType
   integer          :: iNod,nNod
-  integer          :: deg0,iDeg,nDeg
+  integer          :: deg0,nDeg
   real(8), pointer :: uvw(:,:)
   character(256)   :: file
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -1075,9 +1074,9 @@ module procedure writeInriaHOBinary
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   integer          :: l
   integer(8)       :: inriaSol
-  integer          :: iCell,nCell,iType,iCell0
+  integer          :: nCell,iCell0
   integer          :: iNod,nNod
-  integer          :: deg0,iDeg,nDeg
+  integer          :: iDeg,nDeg
   real(8), pointer :: uvw(:,:)
   character(256)   :: file
   integer          :: iErr
@@ -1123,7 +1122,7 @@ module procedure writeInriaHOBinary
   
   !>>>
   TetrahedraNodesPositions: if( .not.ob%nT4==0 )then
-    print '(4x,"TetrahedraNodesPositions {1-u-v-w,u,v,w} (order="i0,")")',ob%ord(1)
+    print '(4x,"TetrahedraNodesPositions {1-u-v-w,u,v,w} (order=",i0,")")',ob%ord(1)
     uvw=>ob%T4uvw
     nNod=size(uvw,2)
     
@@ -1159,7 +1158,7 @@ module procedure writeInriaHOBinary
   
   !>>>
   QuadrilateralsNodesPositions: if( .not.ob%nQ4==0 )then
-    print '(4x,"QuadrilateralsNodesPositions (order="i0,")")',ob%ord(1)
+    print '(4x,"QuadrilateralsNodesPositions (order=",i0,")")',ob%ord(1)
     uvw=>ob%Q4uvw
     uvw(:,:)=(uvw(:,:)+1d0)*5d-1                                                                    !> \in [0,1]^2 INRIA
     nNod=size(uvw,2)
@@ -1181,7 +1180,7 @@ module procedure writeInriaHOBinary
   
   !>>>
   TrianglesNodesPositions: if( .not.ob%nT3==0 )then
-    print '(4x,"TrianglesNodesPositions (order="i0,")")',ob%ord(1)
+    print '(4x,"TrianglesNodesPositions (order=",i0,")")',ob%ord(1)
     uvw=>ob%T3uvw
     nNod=size(uvw,2)
     
@@ -1415,8 +1414,6 @@ end procedure writeInriaHOBinary
 module procedure display
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   integer                    :: iKer
-  real(8)   , pointer        :: dExtrema(:,:)
-  complex(8), pointer        :: zExtrema(:,:)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   if( ob%solution )then
@@ -1450,7 +1447,6 @@ end procedure display
 
 module procedure displaySol
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  integer                   :: iCell,iDeg
   integer                   :: iKer
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1459,20 +1455,23 @@ module procedure displaySol
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   if( ob%solutionIsReal )then
     do iKer=1,ob%ker
-      print '(4x,"comp "i1,": min/max=",e22.15,"/",e22.15)',iKer,minval(ob%dsol(iKer,:)),maxval(ob%dsol(iKer,:)) 
+      print '(4x,"comp ",i1,": min/max=",e22.15,"/",e22.15)',iKer,minval(ob%dsol(iKer,:)),maxval(ob%dsol(iKer,:)) 
     enddo
   else
     do iKer=1,ob%ker
-      print '(4x,"comp "i1,": min/max=",e22.15,"/",e22.15)',iKer,minval(abs(ob%zsol(iKer,:))),maxval(abs(ob%zsol(iKer,:))) 
+      print '(4x,"comp ",i1,": min/max=",e22.15,"/",e22.15)',iKer,minval(abs(ob%zsol(iKer,:))),maxval(abs(ob%zsol(iKer,:))) 
     enddo
   endif
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !block
+  !integer                   :: iCell,iDeg
   !iCell=1
   !do iDeg=1,ob%nDeg
   !  if( iDeg>ob%deg(iCell+1)-1 )iCell=iCell+1
   !  print '(4x,"iCell=",i10," iDeg=",i10," xyz=",5(e22.15,1x))',iCell,iDeg,ob%dsol(1:ob%ker,iDeg)
   !enddo
+  !end block
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   print '("<<< displaySol")'
@@ -1481,168 +1480,6 @@ module procedure displaySol
 end procedure displaySol
 
 end submodule myProcedures
-
-
-
-subroutine computeOrder()
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  use mesParametres
-  use myData
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  implicit none
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  type :: clock
-    character(8)   :: date
-    character(10)  :: time
-    integer        :: year,mounth,day
-    integer        :: hour,minute,second
-    character(5)   :: zone
-  end type clock
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  type(monType)       :: ob
-  integer             :: i
-  integer             :: iCell
-  real(8)             :: nrjMin,nrjMax,nrjAve
-  real(8), pointer    :: nrj(:)
-  integer, pointer    :: order(:)
-  integer             :: iDeg
-  integer             :: verbose
-  character(80)       :: buffer
-  integer             :: iErr
-  integer             :: values(8)
-  type(clock)         :: clock0
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  call date_and_time(     &
-  &    date=clock0%date  ,&
-  &    time=clock0%time  ,&
-  &    zone=clock0%zone  ,&
-  &    values=values      )
-  
-  clock0%year  =values(1)
-  clock0%mounth=values(2)
-  clock0%day   =values(3)
-  clock0%hour  =values(5)
-  clock0%minute=values(6)
-  clock0%second=values(7)
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  print '(/"usage: lectureRAW <file>")'
-  print '(4x,"file: solutions")'
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  if( command_argument_count()>=1 )then
-    call get_command_argument(number=1,value =ob%file)
-  else
-    write(*,'(/"file: ")',advance='no') ; read(*,'(a)')ob%file
-  endif
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  call ob%readRAW
-  call ob%display
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  !> Analyzing Values
-  select case(ob%geometry)
-  case(Geo3D)
-    select case(ob%equation)
-    case(EqnLEE)
-      
-      block
-      integer             :: jDeg,nDeg
-      real(8)             :: u1,v1,w1,x1,e1
-      real(8)   , pointer :: dSolu(:,:)
-      complex(8), pointer :: zSolu(:,:)
-      
-      allocate(nrj(1:ob%nCell))
-      
-      iDeg=1
-      do iCell=1,ob%nCell
-        nrj(iCell)=0d0
-        
-        select case( ob%cellType(iCell) )
-        case(hexahedron,hexahedron2)
-         nDeg=(ob%ord(iCell)+1)
-         nDeg=nDeg*nDeg*nDeg
-        case(tetra,tetra2)
-         nDeg=(ob%ord(iCell)+1)
-         nDeg=nDeg*(nDeg+1)*(nDeg+2)/6
-        case default
-          write(*,'(/"Kind of cell not implemented: ",i0)')ob%cellType(iCell)
-          stop
-        end select
-        
-        if( ob%solutionIsReal )then
-          dSolu=>ob%dsol(1:ob%ker,iDeg:iDeg+nDeg-1)
-          do jDeg=1,nDeg        
-            e1=e1+dot_product(dSolu(:,jDeg),dSolu(:,jDeg))
-          enddo
-        else
-          zSolu=>ob%zsol(1:ob%ker,iDeg:iDeg+nDeg-1)
-          do jDeg=1,nDeg
-            e1=e1+dot_product(zSolu(:,jDeg),zSolu(:,jDeg))
-          enddo
-        endif
-        nrj(iCell)=e1/real(nDeg,kind=8)
-        
-        iDeg=iDeg+nDeg
-      enddo
-      
-      nrjMin=minval(nrj)
-      nrjMax=maxval(nrj)
-      nrjAve=sum(nrj)/real(ob%nDeg,kind=8)
-      
-      end block
-      
-    case default
-      print '("Stop @ computeOrder Equation not Implemented")'
-    end select
-  case default
-    print '("Stop @ computeOrder Geometry not Implemented")'
-  end select
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
-  
-  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  block
-  integer :: iUnit
-  integer :: iCell
-  open(newunit=iUnit,file="order.sol",action='write')
-  
-  write(iUnit,'("MeshVersionFormatted 2"/)')
-  select case(ob%geometry)
-  case(Geo2D) ; write(iUnit,'("Dimension 2"/)')
-  case(Geo3D) ; write(iUnit,'("Dimension 3"/)')
-  end select
-  
-  if( .not.ob%nT4==0 )then
-    write(iUnit,'("SolAtTetrahedra")')
-    write(iUnit,'(i0)')ob%nT4
-    write(iUnit,'("1 1"/)')
-    do iCell=1,ob%nT4
-      if( nrj(iCell)> nrjAve/2d0 )then
-        order(iCell)=1
-      else
-        order(iCell)=3
-      endif
-    enddo
-  endif
-  
-  close(iUnit)
-  end block
-  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
-  return
-end subroutine computeOrder
 
 
 subroutine compareRAW()
@@ -1996,15 +1833,9 @@ subroutine replaceRAW()
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   type(monType)       :: ob1,ob2
   integer             :: i
-  integer             :: iCell,iCellMax
-  integer             :: iVar
-  integer             :: iDeg,iDegMax
-  real(8)             :: dSol(1:5),dSolMax(1:5),d,dMax,dAve
+  integer             :: iDeg
   real(8) , parameter :: eps=1d-12
-  integer             :: cpt
   integer             :: verbose
-  character(80)       :: buffer
-  integer             :: iErr
   integer             :: values(8)
   type(clock)         :: clock0
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -2063,9 +1894,10 @@ subroutine replaceRAW()
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   !> Replacing Values
   block
-  real(8)             :: x,y,z
+  real(8)             :: x,y
   real(8)             :: x0,y0,z0
-  real(8)             :: rho0,rhou0,rhov0,rhow0,rhoE0,T,p,r,u,v,w,ru,rv,rw,re,p0,r0,ru0,rv0,rw0,u0,v0,w0,re0,vRef
+  !real(8)             :: T,p,r,u,v,w,ru,rv,rw,re,p0,r0,ru0,rv0,rw0,u0,v0,w0,re0,vRef
+  real(8)             :: T,p,r,u,v,ru,rv,re,p0,r0,ru0,rv0,u0,v0,re0,vRef
   real(8)             :: amp,sigma
   real(8)             :: coef
   real(8) , parameter :: ln2=0.693147180559945d0
@@ -2185,15 +2017,8 @@ subroutine readPosition()
   
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   type(monType)       :: ob
-  integer             :: iCell,iCellMax
-  integer             :: iVar
-  integer             :: iDeg,iDegMax
-  real(8)             :: dSol(1:5),dSolMax(1:5),d,dMax,dAve
   real(8) , parameter :: eps=1d-12
-  integer             :: cpt
   integer             :: verbose
-  character(80)       :: buffer
-  integer             :: iErr
   integer             :: values(8)
   type(clock)         :: clock0
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
