@@ -1220,7 +1220,11 @@ module procedure writeInriaHOBinary
   
   !>>> nFld and kind
   select case(ob%equation)
-  case(EqnLEE) ; nFld=2 ; kind(1:nFld)=[GmfVec,GmfSca]         ! {u1, v1, w1 }, x1=rh1*a0/rho0
+  case(EqnLEE) ; nFld=2 
+    select case(ob%geometry)
+    case(Geo2D,Geo3D) ; kind(1:nFld)=[GmfVec  ,GmfSca]   ! {u1, v1, w1 }, x1=rh1*a0/rho0
+    case(GeoAx)       ; kind(1:nFld)=[GmfVec+1,GmfSca]   ! {u1, v1, w1 }, x1=rh1*a0/rho0
+    end select    
   case(EqnEUL) ; nFld=3 ; kind(1:nFld)=[GmfSca,GmfVec,GmfSca]  ! rho, {rho u, rho v, rho w}, rho E
   case default
     write(*,'(/"Choice equation not possible: ",i0)')ob%equation
