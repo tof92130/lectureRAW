@@ -397,7 +397,7 @@ module procedure readRaw
           read(250)ob%T3uvw(1:strd,1:nNod)
           uvw=>ob%T3uvw
         case default
-          write(*,'(/"Choice geometry not possible: ",a)')trim(buffer)
+          write(*,'(/"Choice Elemement not possible: ",a)')trim(buffer)
           stop      
         end select
         
@@ -1158,10 +1158,18 @@ module procedure writeInriaHOBinary
   
   !>>>
   QuadrilateralsNodesPositions: if( .not.ob%nQ4==0 )then
-    print '(4x,"QuadrilateralsNodesPositions (order=",i0,")")',ob%ord(1)
+    print '(4x,"QuadrilateralsNodesPositions",t50,"(order=",i0,")")',ob%ord(1)
     uvw=>ob%Q4uvw
     uvw(:,:)=(uvw(:,:)+1d0)*5d-1                                                                    !> \in [0,1]^2 INRIA
     nNod=size(uvw,2)
+    
+    do iNod=1,nNod
+      print '(6x,*(e22.15,1x))',uvw(:,iNod)
+     !print '(6x,*(e22.15,1x))',(1d0-uvw(1,iNod))*(1d0-uvw(2,iNod)),&
+     !&                         (    uvw(1,iNod))*(1d0-uvw(2,iNod)),&
+     !&                         (    uvw(1,iNod))*(    uvw(2,iNod)),&
+     !&                         (1d0-uvw(1,iNod))*(    uvw(2,iNod))  
+    enddo
     
     select case(ob%meshOrder)
     case(1) ; GmfKey=GmfHOSolAtQuadrilateralsQ1NodesPositions
@@ -1172,6 +1180,7 @@ module procedure writeInriaHOBinary
     
     call writeNodeBlock()
     
+    
     uvw(:,:)=2d0*uvw(:,:)-1d0                                                                       !> \in [-1,1]^2 Space
     
     uvw=>null()
@@ -1180,7 +1189,7 @@ module procedure writeInriaHOBinary
   
   !>>>
   TrianglesNodesPositions: if( .not.ob%nT3==0 )then
-    print '(4x,"TrianglesNodesPositions (order=",i0,")")',ob%ord(1)
+    print '(4x,"TrianglesNodesPositions",t50,"(order=",i0,")")',ob%ord(1)
     uvw=>ob%T3uvw
     nNod=size(uvw,2)
     
@@ -1189,7 +1198,7 @@ module procedure writeInriaHOBinary
       uvw(3,iNod)=uvw(2,iNod)
       uvw(2,iNod)=uvw(1,iNod)
       uvw(1,iNod)=x
-      print '(6x,*(e12.5,1x))',uvw(1:3,iNod)
+      print '(6x,*(e22.15,1x))',uvw(1:3,iNod)
     enddo
     
     select case(ob%meshOrder)

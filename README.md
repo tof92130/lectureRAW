@@ -5,10 +5,10 @@ comparaisons de deux sorties binaires solutions de space
 
 
 
-ifort lectureRAW.f90 ${LIBMESH_DIR}/lib/libMeshbf.7.a  -I${LIBMESH_DIR}/include  ${SPACE_BASIS_DIR}/lib/libspaceBasis.a -I${SPACE_BASIS_DIR}/include  -mkl -o lectureRaw
+ifort lectureRAW.f90 ${LIBMESH_DIR}/lib/libMeshbf.7.a  -I${LIBMESH_DIR}/include ${SPACE_BASIS_DIR}/lib/libspaceBasis.a -I${SPACE_BASIS_DIR}/include  -mkl -static-intel  -o lectureRaw
 
 
-ifort lectureRAW.f90 ${LIBMESH_DIR}/lib/libMeshbf.7.a  -I${LIBMESH_DIR}/include  ${SPACE_BASIS_DIR}/lib/libspaceBasis.a -I${SPACE_BASIS_DIR}/include  -mkl -g  -traceback -check -o lectureRaw
+ifort lectureRAW.f90 ${LIBMESH_DIR}/lib/libMeshbf.7.a  -I${LIBMESH_DIR}/include ${SPACE_BASIS_DIR}/lib/libspaceBasis.a -I${SPACE_BASIS_DIR}/include  -mkl -static-intel  -g  -traceback -check -o lectureRaw
 
 
 Version GNU
