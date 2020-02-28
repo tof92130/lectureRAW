@@ -415,7 +415,7 @@ module procedure readRaw
   close(unit=250)
   print '(4x,"Closing file: ",a)',trim(ob%file)
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    
+  
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   if( ob%version>=3 )then
     allocate(ob%deg(1:ob%nCell+1)) ; ob%deg(1)=1
@@ -424,7 +424,7 @@ module procedure readRaw
       case(hexahedron,hexahedron2)                 ; ob%deg(iCell+1)=ob%deg(iCell)+(ob%ord(iCell)+1)*(ob%ord(iCell)+1)*(ob%ord(iCell)+1)
       case(wedge                 )                 ; ob%deg(iCell+1)=ob%deg(iCell)+(ob%ord(iCell)+1)*(ob%ord(iCell)+1)*(ob%ord(iCell)+2)/2
       case(pyramid               )                 ; ob%deg(iCell+1)=ob%deg(iCell)+(ob%ord(iCell)+1)*(ob%ord(iCell)+2)*(2*ob%ord(iCell)+3)/6
-      case(tetra,tetra2          )                 ; ob%deg(iCell+1)=ob%deg(iCell)+(ob%ord(iCell)+1)*(ob%ord(iCell)+2)*(ob%ord(iCell)+3)/6
+      case(tetra,tetra2,tetra3   )                 ; ob%deg(iCell+1)=ob%deg(iCell)+(ob%ord(iCell)+1)*(ob%ord(iCell)+2)*(ob%ord(iCell)+3)/6
       case(quad,quad2,quad3,quad4)                 ; ob%deg(iCell+1)=ob%deg(iCell)+(ob%ord(iCell)+1)*(ob%ord(iCell)+1)
       case(triangle,triangle2,triangle3,triangle4) ; ob%deg(iCell+1)=ob%deg(iCell)+(ob%ord(iCell)+1)*(ob%ord(iCell)+2)/2
       end select
@@ -444,7 +444,7 @@ module procedure readRaw
     case(hexahedron,hexahedron2)                 ; ob%nH6=ob%nH6+1
     case(wedge                 )                 ; ob%nW5=ob%nW5+1
     case(pyramid               )                 ; ob%nP5=ob%nP5+1
-    case(tetra,tetra2          )                 ; ob%nT4=ob%nT4+1
+    case(tetra,tetra2,tetra3   )                 ; ob%nT4=ob%nT4+1
     case(quad,quad2,quad3,quad4)                 ; ob%nQ4=ob%nQ4+1
     case(triangle,triangle2,triangle3,triangle4) ; ob%nT3=ob%nT3+1
     end select
@@ -548,7 +548,7 @@ module procedure isoOrderRaw
       
       do iOrd=ordMin,ordMax
         if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
-          print '(4x,"Passing from order=",i0," to order ",i0,t50,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
+          print '(4x,"Passing from order=",i0," to order ",i0,t70,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
           
           call nodesT4   (ord=iOrd,uvw=uvw0,display=.false.)
           call nodesT4opt(ord=iOrd,uvw=uvw0,display=.false.)
@@ -636,7 +636,7 @@ module procedure isoOrderRaw
       
       do iOrd=ordMin,ordMax
         if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
-          print '(4x,"Passing from order=",i0," to order ",i0,t50,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
+          print '(4x,"Passing from order=",i0," to order ",i0,t70,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
           
           call nodesT3   (ord=iOrd,uvw=uvw0,display=.false.)
           call nodesT3Opt(ord=iOrd,uvw=uvw0,display=.false.)
@@ -1101,7 +1101,7 @@ module procedure writeInriaHOBinary
   !> HO NodesPositions
   
   HexahedraNodesPositions: if( .not.ob%nH6==0 )then
-    print '(4x,"HexahedraNodesPositions")'
+    print '(4x,"HexahedraNodesPositions {u,v,w}",t70,"(order=",i0,")")',ob%ord(1)
     uvw=>ob%H6uvw
     nNod=size(uvw,2)
     uvw(:,:)=(uvw(:,:)+1d0)*5d-1                                                                    !> \in [0,1]^3 INRIA
@@ -1122,7 +1122,7 @@ module procedure writeInriaHOBinary
   
   !>>>
   TetrahedraNodesPositions: if( .not.ob%nT4==0 )then
-    print '(4x,"TetrahedraNodesPositions {1-u-v-w,u,v,w} (order=",i0,")")',ob%ord(1)
+    print '(4x,"TetrahedraNodesPositions {1-u-v-w,u,v,w}",t70,"(order=",i0,")")',ob%ord(1)
     uvw=>ob%T4uvw
     nNod=size(uvw,2)
     
@@ -1158,7 +1158,7 @@ module procedure writeInriaHOBinary
   
   !>>>
   QuadrilateralsNodesPositions: if( .not.ob%nQ4==0 )then
-    print '(4x,"QuadrilateralsNodesPositions",t50,"(order=",i0,")")',ob%ord(1)
+    print '(4x,"QuadrilateralsNodesPositions {u,v}",t70,"(order=",i0,")")',ob%ord(1)
     uvw=>ob%Q4uvw
     uvw(:,:)=(uvw(:,:)+1d0)*5d-1                                                                    !> \in [0,1]^2 INRIA
     nNod=size(uvw,2)
@@ -1189,7 +1189,7 @@ module procedure writeInriaHOBinary
   
   !>>>
   TrianglesNodesPositions: if( .not.ob%nT3==0 )then
-    print '(4x,"TrianglesNodesPositions",t50,"(order=",i0,")")',ob%ord(1)
+    print '(4x,"TrianglesNodesPositions {1-u-v,u,v}",t70,"(order=",i0,")")',ob%ord(1)
     uvw=>ob%T3uvw
     nNod=size(uvw,2)
     
@@ -1812,12 +1812,7 @@ subroutine exportInriaHO()
   call ob%readRaw
   call ob%displaySol
   call ob%isoOrder       (ord=max(maxval(ob%ord),1))
- !call isoOrderRaw       (ob=ob,ord=max(maxval(ob%ord),1))
- !call isoOrderRaw       (ob=ob,ord=4)
- !call displaySol        (ob=ob)
- !call afficheSol        (ob=ob)
   call ob%displaySol
- !call writeInriaHO      (ob=ob)
   call ob%writeInria
   call ob%delete
   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
