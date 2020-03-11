@@ -46,7 +46,7 @@ module mesParametres
   
   integer, parameter    :: EqnLEE=4  !> Linearized Euler Equations
   integer, parameter    :: EqnEUL=5  !> Euler Equations
-
+  
 end module mesParametres
 
 
@@ -88,12 +88,12 @@ module myData
     real(8) , pointer     :: Q4uvw(:,:)
     real(8) , pointer     :: T3uvw(:,:)
   contains
-    procedure, pass :: delete     => delete
-    procedure, pass :: display    => display
-    procedure, pass :: displaySol => displaySol
-    procedure, pass :: isoOrder   => isoOrderRaw
-    procedure, pass :: readRaw    => readRaw
-    procedure, pass :: writeInria => writeInriaHOBinary
+    procedure, pass       :: delete     => delete
+    procedure, pass       :: display    => display
+    procedure, pass       :: displaySol => displaySol
+    procedure, pass       :: isoOrder   => isoOrderRaw
+    procedure, pass       :: readRaw    => readRaw
+    procedure, pass       :: writeInria => writeInriaHOBinary
     !generic :: write(unformatted) => writeRAW
   end type monType
 
@@ -477,8 +477,8 @@ module procedure isoOrderRaw
   integer                 :: iDeg0,nDeg0
   integer                 :: iDeg1,nDeg1
   logical, pointer        :: orderIsPresent(:)
-  real(8), pointer        :: uvw0(:,:),a0(:),b0(:),c0(:)
-  real(8), pointer        ::           a (:),b (:),c (:)
+  real(8), pointer        :: uvw0(:,:),a0(:),b0(:),c0(:),u0(:)
+  real(8), pointer        ::           a (:),b (:),c (:),u (:)
   real(8), pointer        :: vand(:,:)
   real(8), pointer        :: ai  (:,:)
   type(lagrange), pointer :: base(:)
@@ -503,10 +503,22 @@ module procedure isoOrderRaw
     
     !>>> Allocation
     nDeg=0
-    if( .not.ob%nH6==0 )nDeg=nDeg+ob%nH6*(ord+1)*(ord+1)*(ord+1)
-    if( .not.ob%nT4==0 )nDeg=nDeg+ob%nT4*(ord+1)*(ord+2)*(ord+3)/6
-    if( .not.ob%nQ4==0 )nDeg=nDeg+ob%nQ4*(ord+1)*(ord+1)
-    if( .not.ob%nT3==0 )nDeg=nDeg+ob%nT3*(ord+1)*(ord+2)/2
+    if( .not.ob%nH6==0 )then
+      print '(4x,"nH6=",i10)',ob%nH6
+      nDeg=nDeg+ob%nH6*(ord+1)*(ord+1)*(ord+1)
+    endif
+    if( .not.ob%nT4==0 )then
+      print '(4x,"nT4=",i10)',ob%nT4
+      nDeg=nDeg+ob%nT4*(ord+1)*(ord+2)*(ord+3)/6
+    endif
+    if( .not.ob%nQ4==0 )then
+      print '(4x,"nQ4=",i10)',ob%nQ4
+      nDeg=nDeg+ob%nQ4*(ord+1)*(ord+1)
+    endif
+    if( .not.ob%nT3==0 )then
+      print '(4x,"nT3=",i10)',ob%nT3
+      nDeg=nDeg+ob%nT3*(ord+1)*(ord+2)/2
+    endif
     print '(4x,"Intial/Final nDeg=",i0," -> ",i0)',ob%nDeg,nDeg
     
     if( ob%solutionIsReal )then
@@ -548,7 +560,7 @@ module procedure isoOrderRaw
       
       do iOrd=ordMin,ordMax
         if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
-          print '(4x,"Passing from order=",i0," to order ",i0,t70,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
+          print '(4x,"Passing Tetra from order=",i0," to order ",i0,t70,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
           
           call nodesT4   (ord=iOrd,uvw=uvw0,display=.false.)
           call nodesT4opt(ord=iOrd,uvw=uvw0,display=.false.)
@@ -610,11 +622,80 @@ module procedure isoOrderRaw
       iCell0=iCell0+nCell
     endif
     !<<< Tetra
-
+    
     !>>> Quads
     nCell=ob%nQ4
     if( .not.nCell==0 )then
+      !deallocate(ob%Q4uvw)
+      
+      !> Points d'interpollation a ord
+      call nodesL2Opt(ord=ord,uvw=u,display=.false.)
+      !call nodesQ4Opt(ord=ord,uvw=ob%Q4uvw,display=.false.)
+      nDeg1=size(u)
 
+      orderIsPresent(ordMin:ordMax)=.false.
+      do iCell=iCell0+1,iCell0+nCell
+        orderIsPresent(ob%ord(iCell))=.true.
+      enddo
+      
+      do iOrd=ordMin,ordMax
+        if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
+          print '(4x,"Passing Quads from order=",i0," to order ",i0,t70,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
+          
+          call nodesL2Opt(ord=iOrd,uvw=u0,display=.false.)
+          nDeg0=size(u0) !> = nMod
+
+          allocate(base(iOrd)%ai(1:nDeg0*nDeg0,1:nDeg1*nDeg1)) ! print '(4x,"size(ai) order=",i0,": nMod x nNod= ",i0,"x",i0)',iOrd,nDeg0*nDeg0,nDeg1*nDeg1
+          ai=>base(iOrd)%ai(1:nDeg0*nDeg0,1:nDeg1*nDeg1)
+          call lagrangeQ4_u(ord=iOrd,uvw0=u0,uvw=u,lx=ai,transpose=.true.)
+          
+          deallocate(u0)
+        endif
+      enddo
+      deallocate(u)
+      
+      !> sol(1:ker,1:nDeg1*nDeg1)=sol(1:ker,1:nDeg0*nDeg0) x ai(1:nDeg0*nDeg0,1:nDeg1*nDeg1)
+      do iCell=iCell0+1,iCell0+nCell ! print '("iCell=",i10,"/",i10,2x,"ord:",i0," -> ",i0)',iCell,nCell,ob%ord(iCell),ord
+        if( ob%ord(iCell)==ord )then
+          nDeg0=nDeg1
+          if( ob%solutionIsReal )then
+            dSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1*nDeg1)=ob%dSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0*nDeg0)
+          else
+            zSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1*nDeg1)=ob%zSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0*nDeg0)
+          endif
+        else
+          ai=>base(ob%ord(iCell))%ai(:,:)
+          nDeg0=size(ai,1)
+          if( ob%solutionIsReal )then
+            dSol0=>ob%dSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0*nDeg0)
+            dSol1=>   dSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1*nDeg1)
+            dSol1(1:ob%ker,1:nDeg1*nDeg1)=matmul(dSol0(1:ob%ker,1:nDeg0*nDeg0),ai(1:nDeg0*nDeg0,1:nDeg1*nDeg1))
+          else
+            zSol0=>ob%zSol(1:ob%ker,iDeg0+1:iDeg0+nDeg0*nDeg0)
+            zSol1=>   zSol(1:ob%ker,iDeg1+1:iDeg1+nDeg1*nDeg1)
+            zSol1(1:ob%ker,1:nDeg1*nDeg1)=matmul(zSol0(1:ob%ker,1:nDeg0*nDeg0),ai(1:nDeg0,1:nDeg1*nDeg1))
+          endif
+          !print '("iCell=",i10," ob%ord=",i10," -> ",i10)',iCell,ob%ord(iCell),ord
+          ob%ord(iCell)=ord
+        endif
+        
+        iDeg0=iDeg0+nDeg0*nDeg0
+        iDeg1=iDeg1+nDeg1*nDeg1
+      enddo
+      
+      do iCell=iCell0+2,iCell0+nCell ! print '("iCell=",i10,"/",i10,2x,"ord:",i0," -> ",i0)',iCell,nCell,ob%ord(iCell),ord
+       !print '("iCell=",i10," ob%deg=",i10," -> ",i10)',iCell,ob%deg(iCell),ob%deg(iCell-1)+nDeg1
+        ob%deg(iCell)=ob%deg(iCell-1)+nDeg1*nDeg1
+      enddo
+      
+      !> Nettoyage de la mémoire
+      do iOrd=ordMin,ordMax
+        if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
+          deallocate(base(iOrd)%ai)
+        endif
+      enddo
+      
+      iCell0=iCell0+nCell
     endif
     !<<< Quads
     
@@ -636,7 +717,7 @@ module procedure isoOrderRaw
       
       do iOrd=ordMin,ordMax
         if( orderIsPresent(iOrd) .and. .not.iOrd==ord )then
-          print '(4x,"Passing from order=",i0," to order ",i0,t70,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
+          print '(4x,"Passing Triangles from order=",i0," to order ",i0,t70,"nCell=",i0,"/",i0)',iOrd,ord,count(ob%ord(iCell0+1:iCell0+nCell)==iOrd),nCell
           
           call nodesT3   (ord=iOrd,uvw=uvw0,display=.false.)
           call nodesT3Opt(ord=iOrd,uvw=uvw0,display=.false.)
